@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using lapo_vms_api.Dtos.VisitItem;
 using lapo_vms_api.Dtos.Visitor;
 
 namespace lapo_vms_api.Dtos.Visit;
@@ -15,5 +16,5 @@ public class CreateVisitDto
     public string? HostName { get; set; }
     public string? HostDepartment { get; set; }
 
-
+    public ICollection<CreateVisitItemDto?> VisitItems { get; set; } = new List<CreateVisitItemDto?>();
 }

@@ -29,3 +29,4 @@ packages/
 
 # ASP.NET Core static web assets cache
 **/obj/**/staticwebassets/
+lapo-vms-api/Data/Migrations/
