@@ -17,6 +17,6 @@ public class VisitDto
     public DateTime CheckInTime { get; set; }
     public DateTime? CheckOutTime { get; set; }
     public string CheckedOutBy { get; set; } = string.Empty;
-    public VisitStatus Status { get; set; } = VisitStatus.Pending;
+    public string Status { get; set; } = string.Empty;
     public List<VisitItemDto> VisitItems { get; set; } = new();
 }

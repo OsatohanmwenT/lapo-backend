@@ -120,7 +120,6 @@ namespace lapo_vms_api.Data.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("PhotoPath")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("VisitorType")
@@ -140,9 +139,11 @@ namespace lapo_vms_api.Data.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("IdentificationNumber")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("IdentificationType")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("VisitorId")
