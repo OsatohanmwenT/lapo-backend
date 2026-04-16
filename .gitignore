@@ -1,0 +1,31 @@
+# Build outputs
+**/bin/
+**/obj/
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Visual Studio and VS Code
+.vs/
+.vscode/
+
+# Rider and ReSharper
+.idea/
+_ReSharper*/
+*.DotSettings.user
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+
+# NuGet packages and artifacts
+*.nupkg
+*.snupkg
+packages/
+
+# ASP.NET Core static web assets cache
+**/obj/**/staticwebassets/

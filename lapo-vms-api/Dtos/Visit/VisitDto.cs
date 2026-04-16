@@ -1,0 +1,22 @@
+using lapo_vms_api.Dtos.VisitItem;
+using lapo_vms_api.Model;
+
+namespace lapo_vms_api.Dtos.Visit;
+
+public class VisitDto
+{
+    public int Id { get; set; }
+    public int VisitorId { get; set; }
+    public string PurposeOfVisit { get; set; } = string.Empty;
+    public string? TagNumber { get; set; }
+    public string FloorNumber { get; set; } = string.Empty;
+    public string? HostName { get; set; }
+    public string? HostDepartment { get; set; }
+    public DateTime? RescheduleDate { get; set; }
+    public DateTime RegisteredAt { get; set; }
+    public DateTime CheckInTime { get; set; }
+    public DateTime? CheckOutTime { get; set; }
+    public string CheckedOutBy { get; set; } = string.Empty;
+    public VisitStatus Status { get; set; } = VisitStatus.Pending;
+    public List<VisitItemDto> VisitItems { get; set; } = new();
+}

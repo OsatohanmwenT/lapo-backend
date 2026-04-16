@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>lapo_vms_api</RootNamespace>
+    <!-- <GenerateDocumentationFile>true</GenerateDocumentationFile> -->
+  </PropertyGroup>
+
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.3" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.5" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.5">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.5" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.5">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Scalar.AspNetCore" Version="2.13.22" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="10.1.7" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Controllers\" />
+    <Folder Include="Data\" />
+    <Folder Include="Dtos\" />
+    <Folder Include="Dtos\VisitItem\" />
+    <Folder Include="Dtos\VisitorIdentification\" />
+    <Folder Include="Dtos\Visitor\" />
+    <Folder Include="Dtos\Visit\" />
+    <Folder Include="Dtos\WorkerDetails\" />
+    <Folder Include="Helpers\" />
+    <Folder Include="Interface\" />
+    <Folder Include="Mappers\" />
+    <Folder Include="Model\" />
+    <Folder Include="Model\Visitor\" />
+    <Folder Include="Repository\" />
+    <Folder Include="Services\" />
+    <Folder Include="Service\" />
+  </ItemGroup>
+
+</Project>
