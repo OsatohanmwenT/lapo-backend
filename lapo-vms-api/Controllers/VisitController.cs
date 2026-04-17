@@ -75,7 +75,7 @@ namespace lapo_vms_api.Controllers
             var visit = new Visit
             {
                 Visitor = visitor,
-                PurposeOfVisit = dto.PurposeOfVisit,
+                PurposeOfVisit = dto.PurposeOfVisit ?? string.Empty,
                 FloorNumber = dto.FloorNumber,
                 HostName = dto.HostName,
                 HostDepartment = dto.HostDepartment,
