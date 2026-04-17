@@ -61,6 +61,15 @@ namespace lapo_vms_api.Controllers
                 };
             }
 
+            var visitItems = dto.VisitItems
+                .Where(vi => vi != null)
+                .Select(vi => new VisitItem
+                {
+                    SerialNumber = vi!.SerialNumber,
+                    LaptopModel = vi.LaptopModel
+                })
+                .ToList();
+
             var visit = new Visit
             {
                 Visitor = visitor,
@@ -70,7 +79,8 @@ namespace lapo_vms_api.Controllers
                 HostDepartment = dto.HostDepartment,
                 CheckInTime = DateTime.UtcNow,
                 CheckedOutBy = string.Empty,
-                Status = VisitStatus.Pending
+                Status = VisitStatus.Pending,
+                VisitItems = visitItems
             };
 
             var createdVisit = await _visitRepository.CreateAsync(visit);

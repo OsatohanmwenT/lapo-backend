@@ -21,7 +21,7 @@ public static class VisitMapper
             CheckInTime = visit.CheckInTime,
             CheckOutTime = visit.CheckOutTime,
             CheckedOutBy = visit.CheckedOutBy,
-            Status = visit.Status,
+            Status = visit.Status.ToString(),
             VisitItems = visit.VisitItems.Select(item => item.ToVisitItemDto()).ToList()
         };
     }
