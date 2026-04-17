@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using lapo_vms_api.Dtos.VisitorIdentification;
 using lapo_vms_api.Model;
+using Microsoft.AspNetCore.Http;
 
 namespace lapo_vms_api.Dtos.Visitor;
 

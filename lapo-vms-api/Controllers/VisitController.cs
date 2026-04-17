@@ -30,6 +30,7 @@ namespace lapo_vms_api.Controllers
         }
 
         [HttpPost]
+        [Consumes("multipart/form-data")]
         public async Task<IActionResult> CreateVisit([FromBody] CreateVisitDto dto)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);

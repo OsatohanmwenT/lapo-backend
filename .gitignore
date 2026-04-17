@@ -33,3 +33,4 @@ Migrations
 # Ignore appsettings (sensitive config)
 appsettings.json
 appsettings.*.json
+lapo-vms-api/Data/Migrations/
