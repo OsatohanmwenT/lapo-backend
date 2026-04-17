@@ -21,7 +21,7 @@ public class VisitorController(IVisitorRepository visitorRepository) : Controlle
 
     [HttpPost]
     [Consumes("multipart/form-data")]
-    public async Task<IActionResult> CreateVisitor([FromBody] CreateVisitorDto dto)
+    public async Task<IActionResult> CreateVisitor([FromForm] CreateVisitorDto dto)
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
 
