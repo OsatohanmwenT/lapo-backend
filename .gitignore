@@ -29,3 +29,7 @@ packages/
 
 # ASP.NET Core static web assets cache
 **/obj/**/staticwebassets/
+Migrations
+# Ignore appsettings (sensitive config)
+appsettings.json
+appsettings.*.json
