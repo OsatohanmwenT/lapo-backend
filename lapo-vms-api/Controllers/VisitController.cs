@@ -30,66 +30,73 @@ namespace lapo_vms_api.Controllers
         }
 
         [HttpPost]
-        [Consumes("multipart/form-data")]
-        public async Task<IActionResult> CreateVisit([FromForm] CreateVisitDto dto)
+        [Consumes("application/json")]
+        public async Task<IActionResult> CreateVisit([FromBody] CreateVisitJsonDto dto)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
-            var photoPath = await ImageUploader.UploadImage(dto.Visitor.Photo);
-
-            var visitor = new Visitor
+            try
             {
-                FullName = dto.Visitor.FullName,
-                PhoneNumber = dto.Visitor.PhoneNumber,
-                PhotoPath = photoPath,
-                VisitorType = dto.Visitor.VisitorType
-            };
+                var photoPath = await ImageUploader.UploadImage(dto.Visitor.Photo);
 
-            if (dto.Visitor.Identification != null)
-            {
-                visitor.Identification = new VisitorIdentification
+                var visitor = new Visitor
                 {
-                    IdentificationType = dto.Visitor.Identification.IdentificationType,
-                    IdentificationNumber = dto.Visitor.Identification.IdentificationNumber
+                    FullName = dto.Visitor.FullName,
+                    PhoneNumber = dto.Visitor.PhoneNumber,
+                    PhotoPath = photoPath,
+                    VisitorType = dto.Visitor.VisitorType
                 };
-            }
 
-            if (!string.IsNullOrWhiteSpace(dto.Visitor.CompanyName))
-            {
-                visitor.WorkerDetails = new WorkerDetails
+                if (dto.Visitor.Identification != null)
                 {
-                    CompanyName = dto.Visitor.CompanyName
+                    visitor.Identification = new VisitorIdentification
+                    {
+                        IdentificationType = dto.Visitor.Identification.IdentificationType,
+                        IdentificationNumber = dto.Visitor.Identification.IdentificationNumber
+                    };
+                }
+
+                if (!string.IsNullOrWhiteSpace(dto.Visitor.CompanyName))
+                {
+                    visitor.WorkerDetails = new WorkerDetails
+                    {
+                        CompanyName = dto.Visitor.CompanyName
+                    };
+                }
+
+                var visitItems = dto.VisitItems
+                    .Where(vi => vi != null)
+                    .Select(vi => new VisitItem
+                    {
+                        SerialNumber = vi!.SerialNumber,
+                        LaptopModel = vi.LaptopModel
+                    })
+                    .ToList();
+
+                var visit = new Visit
+                {
+                    Visitor = visitor,
+                    PurposeOfVisit = dto.PurposeOfVisit,
+                    FloorNumber = dto.FloorNumber,
+                    HostName = dto.HostName,
+                    HostDepartment = dto.HostDepartment,
+                    CheckInTime = DateTime.UtcNow,
+                    CheckedOutBy = string.Empty,
+                    Status = VisitStatus.Pending,
+                    VisitItems = visitItems
                 };
+
+                var createdVisit = await _visitRepository.CreateAsync(visit);
+
+                return CreatedAtAction(
+                    nameof(GetVisitById),
+                    new { id = createdVisit.Id },
+                    createdVisit.ToVisitDto());
             }
-
-            var visitItems = dto.VisitItems
-                .Where(vi => vi != null)
-                .Select(vi => new VisitItem
-                {
-                    SerialNumber = vi!.SerialNumber,
-                    LaptopModel = vi.LaptopModel
-                })
-                .ToList();
-
-            var visit = new Visit
+            catch (Exception ex)
             {
-                Visitor = visitor,
-                PurposeOfVisit = dto.PurposeOfVisit,
-                FloorNumber = dto.FloorNumber,
-                HostName = dto.HostName,
-                HostDepartment = dto.HostDepartment,
-                CheckInTime = DateTime.UtcNow,
-                CheckedOutBy = string.Empty,
-                Status = VisitStatus.Pending,
-                VisitItems = visitItems
-            };
-
-            var createdVisit = await _visitRepository.CreateAsync(visit);
-
-            return CreatedAtAction(
-                nameof(GetVisitById),
-                new { id = createdVisit.Id },
-                createdVisit.ToVisitDto());
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [HttpPatch("{id}/checkout")]
