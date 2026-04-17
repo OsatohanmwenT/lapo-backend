@@ -5,7 +5,7 @@ namespace lapo_vms_api.Model
         public int Id { get; set; }
         public required string FullName { get; set; }
         public required string PhoneNumber { get; set; }
-        public string? PhotoPath { get; set; }
+        public string? PhotoPath { get; set; } = string.Empty;
         public required VisitorType VisitorType { get; set; } = VisitorType.Customer;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

@@ -20,25 +20,18 @@ public class VisitorController(IVisitorRepository visitorRepository) : Controlle
     }
 
     [HttpPost]
-    [Consumes("application/json")]
-    public async Task<IActionResult> CreateVisitor([FromBody] CreateVisitorJsonDto dto)
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> CreateVisitor([FromBody] CreateVisitorDto dto)
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
 
-        try
-        {
-            var photoPath = await ImageUploader.UploadImage(dto.Photo);
+        var photoPath = await ImageUploader.UploadImage(dto.Photo);
 
-            var visitor = dto.ToVisitorFromCreateJsonDto();
-            visitor.PhotoPath = photoPath;
+        var visitor = dto.ToVisitorFromCreateDto();
+        visitor.PhotoPath = photoPath;
 
-            var created = await _visitorRepository.CreateAsync(visitor);
+        var created = await _visitorRepository.CreateAsync(visitor);
 
-            return Ok(created.ToVisitorDto());
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        return Ok(created.ToVisitorDto());
     }
 }

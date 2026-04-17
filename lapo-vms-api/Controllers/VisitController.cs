@@ -30,73 +30,67 @@ namespace lapo_vms_api.Controllers
         }
 
         [HttpPost]
-        [Consumes("application/json")]
-        public async Task<IActionResult> CreateVisit([FromBody] CreateVisitJsonDto dto)
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> CreateVisit([FromForm] CreateVisitDto dto)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
-            try
+            var photoPath = await ImageUploader.UploadImage(dto.Visitor.Photo);
+            Console.WriteLine($"Photo Path: {photoPath}");
+
+            var visitor = new Visitor
             {
-                var photoPath = await ImageUploader.UploadImage(dto.Visitor.Photo);
+                FullName = dto.Visitor.FullName,
+                PhoneNumber = dto.Visitor.PhoneNumber,
+                PhotoPath = photoPath,
+                VisitorType = dto.Visitor.VisitorType
+            };
 
-                var visitor = new Visitor
-                {
-                    FullName = dto.Visitor.FullName,
-                    PhoneNumber = dto.Visitor.PhoneNumber,
-                    PhotoPath = photoPath,
-                    VisitorType = dto.Visitor.VisitorType
-                };
-
-                if (dto.Visitor.Identification != null)
-                {
-                    visitor.Identification = new VisitorIdentification
-                    {
-                        IdentificationType = dto.Visitor.Identification.IdentificationType,
-                        IdentificationNumber = dto.Visitor.Identification.IdentificationNumber
-                    };
-                }
-
-                if (!string.IsNullOrWhiteSpace(dto.Visitor.CompanyName))
-                {
-                    visitor.WorkerDetails = new WorkerDetails
-                    {
-                        CompanyName = dto.Visitor.CompanyName
-                    };
-                }
-
-                var visitItems = dto.VisitItems
-                    .Where(vi => vi != null)
-                    .Select(vi => new VisitItem
-                    {
-                        SerialNumber = vi!.SerialNumber,
-                        LaptopModel = vi.LaptopModel
-                    })
-                    .ToList();
-
-                var visit = new Visit
-                {
-                    Visitor = visitor,
-                    PurposeOfVisit = dto.PurposeOfVisit,
-                    FloorNumber = dto.FloorNumber,
-                    HostName = dto.HostName,
-                    HostDepartment = dto.HostDepartment,
-                    CheckInTime = DateTime.UtcNow,
-                    CheckedOutBy = string.Empty,
-                    Status = VisitStatus.Pending,
-                    VisitItems = visitItems
-                };
-
-                var createdVisit = await _visitRepository.CreateAsync(visit);
-
-                return CreatedAtAction(
-                    nameof(GetVisitById),
-                    new { id = createdVisit.Id },
-                    createdVisit.ToVisitDto());
-            }
-            catch (Exception ex)
+            if (dto.Visitor.Identification != null)
             {
-                return BadRequest(new { message = ex.Message });
+                visitor.Identification = new VisitorIdentification
+                {
+                    IdentificationType = dto.Visitor.Identification.IdentificationType,
+                    IdentificationNumber = dto.Visitor.Identification.IdentificationNumber
+                };
             }
+
+            if (!string.IsNullOrWhiteSpace(dto.Visitor.CompanyName))
+            {
+                visitor.WorkerDetails = new WorkerDetails
+                {
+                    CompanyName = dto.Visitor.CompanyName
+                };
+            }
+
+            var visitItems = dto.VisitItems
+                .Where(vi => vi != null)
+                .Select(vi => new VisitItem
+                {
+                    SerialNumber = vi!.SerialNumber,
+                    LaptopModel = vi.LaptopModel
+                })
+                .ToList();
+
+            var visit = new Visit
+            {
+                Visitor = visitor,
+                PurposeOfVisit = dto.PurposeOfVisit,
+                FloorNumber = dto.FloorNumber,
+                HostName = dto.HostName,
+                HostDepartment = dto.HostDepartment,
+                CheckInTime = DateTime.UtcNow,
+                CheckedOutBy = string.Empty,
+                Status = VisitStatus.Pending,
+                VisitItems = visitItems
+            };
+
+            var createdVisit = await _visitRepository.CreateAsync(visit);
+
+            return CreatedAtAction(
+                nameof(GetVisitById),
+                new { id = createdVisit.Id },
+                createdVisit.ToVisitDto());
         }
 
         [HttpPatch("{id}/checkout")]

@@ -12,6 +12,7 @@ public static class VisitorMapper
             Id = visitor.Id,
             FullName = visitor.FullName,
             PhoneNumber = visitor.PhoneNumber,
+            PhotoPath = visitor.PhotoPath!,
             VisitorType = visitor.VisitorType.ToString(),
             CreatedAt = visitor.CreatedAt,
             Identification = visitor.Identification?.ToVisitorIdentificationDto(),
@@ -27,6 +28,7 @@ public static class VisitorMapper
             FullName = dto.FullName,
             PhoneNumber = dto.PhoneNumber,
             VisitorType = dto.VisitorType,
+        
             Identification = dto.Identification == null
                 ? null
                 : new VisitorIdentification
