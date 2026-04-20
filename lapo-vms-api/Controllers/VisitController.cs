@@ -14,9 +14,9 @@ namespace lapo_vms_api.Controllers
         private readonly IVisitRepository _visitRepository = visitRepository;
 
         [HttpGet]
-        public async Task<IActionResult> GetAllVisits()
+        public async Task<IActionResult> GetAllVisits([FromQuery] QueryParameters queryParameters)
         {
-            var visits = await _visitRepository.GetAllAsync();
+            var visits = await _visitRepository.GetAllAsync(queryParameters);
             return Ok(visits.Select(v => v.ToVisitDto()));
         }
 

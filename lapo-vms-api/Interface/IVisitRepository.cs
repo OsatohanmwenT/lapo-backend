@@ -1,11 +1,12 @@
 using System;
+using lapo_vms_api.Helpers;
 using lapo_vms_api.Model;
 
 namespace lapo_vms_api.Interface;
 
 public interface IVisitRepository
 {
-    Task<List<Visit>> GetAllAsync();
+    Task<List<Visit>> GetAllAsync(QueryParameters queryParameters);
     Task<Visit?> GetByIdAsync(int id);
     Task<Visit> CreateAsync(Visit visitModel);
     Task<Visit?> UpdateAsync(int id, Visit visitModel);

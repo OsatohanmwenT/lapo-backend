@@ -34,7 +34,6 @@
     <Folder Include="Dtos\Visitor\" />
     <Folder Include="Dtos\Visit\" />
     <Folder Include="Dtos\WorkerDetails\" />
-    <Folder Include="Helpers\" />
     <Folder Include="Interface\" />
     <Folder Include="Mappers\" />
     <Folder Include="Model\" />

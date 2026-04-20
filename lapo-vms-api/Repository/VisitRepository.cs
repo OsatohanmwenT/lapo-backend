@@ -1,4 +1,5 @@
 using lapo_vms_api.Data;
+using lapo_vms_api.Helpers;
 using lapo_vms_api.Interface;
 using lapo_vms_api.Model;
 using Microsoft.EntityFrameworkCore;
@@ -31,10 +32,28 @@ public class VisitRepository : IVisitRepository
         return visit;
     }
 
-    public async Task<List<Visit>> GetAllAsync()
+    public async Task<List<Visit>> GetAllAsync(QueryParameters queryParameters)
     {
-        return await _context.Visit
+        var query = _context.Visit
+                .Include(v => v.Visitor)
                 .Include(v => v.VisitItems)
+                .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(queryParameters.Search))
+        {
+            query = query.Where(v => v.Visitor.FullName.Contains(queryParameters.Search));
+        }
+
+        if (!string.IsNullOrWhiteSpace(queryParameters.Status)
+            && Enum.TryParse<VisitStatus>(queryParameters.Status, true, out var parsedStatus))
+        {
+            query = query.Where(v => v.Status == parsedStatus);
+        }
+
+        return await query
+                .OrderByDescending(v => v.RegisteredAt)
+                .Skip((queryParameters.PageNumber - 1) * queryParameters.PageSize)
+                .Take(queryParameters.PageSize)
                 .ToListAsync();
     }
 
