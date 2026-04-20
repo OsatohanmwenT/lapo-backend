@@ -30,17 +30,38 @@ public class VisitorRepository(ApplicationDBContext context) : IVisitorRepositor
         return visitor;
     }
 
-    public async Task<List<Visitor>> GetAllAsync(QueryObject query)
+    public async Task<List<Visitor>> GetAllAsync(QueryParameters queryParameters)
     {
         var visitors = _context.Visitor
             .Include(v => v.Visits)
             .ThenInclude(visit => visit.VisitItems)
             .AsQueryable();
-        if (!string.IsNullOrEmpty(query.FullName))
+
+        if (!string.IsNullOrWhiteSpace(queryParameters.Search))
         {
-            visitors = visitors.Where(v => v.FullName.Contains(query.FullName));
+            visitors = visitors.Where(v =>
+                v.FullName.Contains(queryParameters.Search));
         }
-        return await visitors.ToListAsync();
+
+        if (!string.IsNullOrWhiteSpace(queryParameters.Status))
+        {
+            var match = Enum.GetValues<VisitStatus>()
+                .Cast<VisitStatus>()
+                .FirstOrDefault(s => s.ToString().Contains(queryParameters.Status,
+                    StringComparison.OrdinalIgnoreCase));
+
+            if (Enum.IsDefined(typeof(VisitStatus), match))
+            {
+                visitors = visitors.Where(v => v.Visits.Any(visit => visit.Status == match));
+            }
+        }
+
+
+        return await visitors
+            .OrderByDescending(v => v.CreatedAt)
+            .Skip((queryParameters.PageNumber - 1) * queryParameters.PageSize)
+            .Take(queryParameters.PageSize)
+            .ToListAsync();
     }
 
     public async Task<Visitor?> GetByIdAsync(int id)

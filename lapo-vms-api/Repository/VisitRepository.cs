@@ -36,7 +36,6 @@ public class VisitRepository : IVisitRepository
     {
         var query = _context.Visit
                 .Include(v => v.Visitor)
-                .Include(v => v.VisitItems)
                 .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(queryParameters.Search))
@@ -44,10 +43,17 @@ public class VisitRepository : IVisitRepository
             query = query.Where(v => v.Visitor.FullName.Contains(queryParameters.Search));
         }
 
-        if (!string.IsNullOrWhiteSpace(queryParameters.Status)
-            && Enum.TryParse<VisitStatus>(queryParameters.Status, true, out var parsedStatus))
+        if (!string.IsNullOrWhiteSpace(queryParameters.Status))
         {
-            query = query.Where(v => v.Status == parsedStatus);
+            var match = Enum.GetValues<VisitStatus>()
+                .Cast<VisitStatus>()
+                .FirstOrDefault(s => s.ToString().Contains(queryParameters.Status,
+                    StringComparison.OrdinalIgnoreCase));
+
+            if (Enum.IsDefined(typeof(VisitStatus), match))
+            {
+                query = query.Where(v => v.Status == match);
+            }
         }
 
         return await query

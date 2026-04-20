@@ -13,9 +13,9 @@ public class VisitorController(IVisitorRepository visitorRepository) : Controlle
     private readonly IVisitorRepository _visitorRepository = visitorRepository;
 
     [HttpGet]
-    public async Task<IActionResult> GetAllVisitors([FromQuery] QueryObject query)
+    public async Task<IActionResult> GetAllVisitors([FromQuery] QueryParameters queryParameters)
     {
-        var visitors = await _visitorRepository.GetAllAsync(query);
+        var visitors = await _visitorRepository.GetAllAsync(queryParameters);
         return Ok(visitors.Select(v => v.ToVisitorDto()));
     }
 
