@@ -19,6 +19,17 @@ public class VisitorController(IVisitorRepository visitorRepository) : Controlle
         return Ok(visitors.Select(v => v.ToVisitorDto()));
     }
 
+     [HttpGet("{id}")]
+        public async Task<IActionResult> GetById([FromRoute] int id)
+        {
+            var visitor = await _visitorRepository.GetByIdAsync(id);
+            if(visitor == null)
+            {
+                return NotFound();
+            }
+            return Ok(visitor.ToVisitorDto());
+        }
+
     [HttpPost]
     [Consumes("multipart/form-data")]
     public async Task<IActionResult> CreateVisitor([FromBody] CreateVisitorDto dto)
