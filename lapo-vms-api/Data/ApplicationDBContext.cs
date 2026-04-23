@@ -20,5 +20,9 @@ public class ApplicationDBContext(DbContextOptions<ApplicationDBContext> options
         modelBuilder.Entity<Visitor>()
             .Property(v => v.VisitorType)
             .HasConversion<string>();
+
+        modelBuilder.Entity<User>()
+            .Property(u => u.Role)
+            .HasConversion<string>();
     }
 }
