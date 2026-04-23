@@ -13,6 +13,16 @@ namespace lapo_vms_api.Controllers
     {
         private readonly IVisitRepository _visitRepository = visitRepository;
 
+        /// <summary>
+        /// Retrieves all visit records and applies any supplied query filters,
+        /// paging, or search options before returning the result.
+        /// </summary>
+        /// <param name="queryParameters">
+        /// Query string options used to filter, search, sort, or paginate the visit list.
+        /// </param>
+        /// <returns>
+        /// A collection of visit records formatted as visit DTOs.
+        /// </returns>
         [HttpGet]
         public async Task<IActionResult> GetAllVisits([FromQuery] QueryParameters queryParameters)
         {
@@ -20,6 +30,13 @@ namespace lapo_vms_api.Controllers
             return Ok(visits.Select(v => v.ToVisitDto()));
         }
 
+        /// <summary>
+        /// Retrieves the complete details of a single visit using the visit's unique identifier.
+        /// </summary>
+        /// <param name="id">The unique ID of the visit to retrieve.</param>
+        /// <returns>
+        /// The matching visit record when found; otherwise a not found response.
+        /// </returns>
         [HttpGet("{id}")]
         public async Task<IActionResult> GetVisitById(int id)
         {
@@ -29,6 +46,17 @@ namespace lapo_vms_api.Controllers
             return Ok(visit.ToVisitDto());
         }
 
+        /// <summary>
+        /// Creates a new visit record together with the nested visitor information,
+        /// optional identification details, optional worker details, and any submitted visit items.
+        /// </summary>
+        /// <param name="dto">
+        /// The multipart form payload containing the visitor details, visit metadata,
+        /// and optional items being brought in for the visit.
+        /// </param>
+        /// <returns>
+        /// The created visit record with a location header pointing to the visit lookup endpoint.
+        /// </returns>
         [HttpPost]
         [Consumes("multipart/form-data")]
         public async Task<IActionResult> CreateVisit([FromForm] CreateVisitDto dto)
@@ -93,6 +121,14 @@ namespace lapo_vms_api.Controllers
                 createdVisit.ToVisitDto());
         }
 
+        /// <summary>
+        /// Checks out an existing visit by setting the checkout time to the current UTC time
+        /// and updating the visit status to checked out.
+        /// </summary>
+        /// <param name="id">The unique ID of the visit to check out.</param>
+        /// <returns>
+        /// The updated visit record when checkout is successful; otherwise a bad request or not found response.
+        /// </returns>
         [HttpPatch("{id}/checkout")]
         public async Task<IActionResult> CheckOutVisit(int id)
         {
@@ -111,6 +147,14 @@ namespace lapo_vms_api.Controllers
             return Ok(visit.ToVisitDto());
         }
 
+        /// <summary>
+        /// Reschedules an existing visit to a new date and marks the visit status as rescheduled.
+        /// </summary>
+        /// <param name="id">The unique ID of the visit to reschedule.</param>
+        /// <param name="newDate">The new date and time that should be stored for the visit reschedule.</param>
+        /// <returns>
+        /// The updated visit record when the visit exists; otherwise a not found response.
+        /// </returns>
         [HttpPatch("{id}/reschedule")]
         public async Task<IActionResult> RescheduleVisit(int id, [FromBody] DateTime newDate)
         {
@@ -125,6 +169,14 @@ namespace lapo_vms_api.Controllers
             return Ok(visit.ToVisitDto());
         }
 
+        /// <summary>
+        /// Checks in a pending visit by setting the check-in time to the current UTC time
+        /// and updating the visit status to checked in.
+        /// </summary>
+        /// <param name="id">The unique ID of the visit to check in.</param>
+        /// <returns>
+        /// The updated visit record when check-in is successful; otherwise a bad request or not found response.
+        /// </returns>
         [HttpPatch("{id}/check-in")]
         public async Task<IActionResult> CheckInVisit(int id)
         {
@@ -142,6 +194,15 @@ namespace lapo_vms_api.Controllers
             return Ok(visit.ToVisitDto());
         }
 
+        /// <summary>
+        /// Updates the status of an existing visit to the supplied status value
+        /// without modifying any other visit details.
+        /// </summary>
+        /// <param name="id">The unique ID of the visit to update.</param>
+        /// <param name="status">The new visit status to persist.</param>
+        /// <returns>
+        /// The updated visit record when the visit exists; otherwise a not found response.
+        /// </returns>
         [HttpPatch("{id}/status")]
         public async Task<IActionResult> UpdateVisitStatus(int id, [FromBody] VisitStatus status)
         {

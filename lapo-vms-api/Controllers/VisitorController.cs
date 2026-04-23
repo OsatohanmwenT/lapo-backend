@@ -12,6 +12,16 @@ public class VisitorController(IVisitorRepository visitorRepository) : Controlle
 {
     private readonly IVisitorRepository _visitorRepository = visitorRepository;
 
+    /// <summary>
+    /// Retrieves the list of registered visitors and applies any supplied query filters,
+    /// paging, or search options before returning the result.
+    /// </summary>
+    /// <param name="queryParameters">
+    /// Query string options used to filter, search, sort, or paginate the visitor list.
+    /// </param>
+    /// <returns>
+    /// A collection of visitor records formatted as visitor DTOs.
+    /// </returns>
     [HttpGet]
     public async Task<IActionResult> GetAllVisitors([FromQuery] QueryParameters queryParameters)
     {
@@ -19,17 +29,34 @@ public class VisitorController(IVisitorRepository visitorRepository) : Controlle
         return Ok(visitors.Select(v => v.ToVisitorDto()));
     }
 
-     [HttpGet("{id}")]
-        public async Task<IActionResult> GetById([FromRoute] int id)
+    /// <summary>
+    /// Retrieves the details of a single visitor using the visitor's unique identifier.
+    /// </summary>
+    /// <param name="id">The unique ID of the visitor to retrieve.</param>
+    /// <returns>
+    /// The matching visitor record when found; otherwise a not found response.
+    /// </returns>
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetById([FromRoute] int id)
+    {
+        var visitor = await _visitorRepository.GetByIdAsync(id);
+        if(visitor == null)
         {
-            var visitor = await _visitorRepository.GetByIdAsync(id);
-            if(visitor == null)
-            {
-                return NotFound();
-            }
-            return Ok(visitor.ToVisitorDto());
+            return NotFound();
         }
+        return Ok(visitor.ToVisitorDto());
+    }
 
+    /// <summary>
+    /// Creates a new visitor record from multipart form data, uploads the supplied photo,
+    /// and stores the generated photo path with the visitor details.
+    /// </summary>
+    /// <param name="dto">
+    /// The visitor payload containing personal details, visitor type, and the photo file to upload.
+    /// </param>
+    /// <returns>
+    /// The newly created visitor record when validation succeeds; otherwise a bad request response.
+    /// </returns>
     [HttpPost]
     [Consumes("multipart/form-data")]
     public async Task<IActionResult> CreateVisitor([FromBody] CreateVisitorDto dto)
