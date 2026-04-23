@@ -11,6 +11,7 @@ public interface IVisitRepository
     Task<Visit> CreateAsync(Visit visitModel);
     Task<Visit?> UpdateAsync(int id, Visit visitModel);
 
+    Task<Visit?> UpdateTagNumberAsync(int visitId, string tagNumber);
     Task<Visit?> UpdateStatusAsync(int visitId, VisitStatus status);
     Task<Visit?> DeleteAsync(int id);
 

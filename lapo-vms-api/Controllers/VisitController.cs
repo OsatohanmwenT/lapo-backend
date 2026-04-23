@@ -195,6 +195,29 @@ namespace lapo_vms_api.Controllers
         }
 
         /// <summary>
+        /// Updates the tag number for an existing visit.
+        /// </summary>
+        /// <param name="id">The unique ID of the visit to update.</param>
+        /// <param name="dto">The payload containing the new tag number value.</param>
+        /// <returns>
+        /// The updated visit record when the visit exists and the payload is valid;
+        /// otherwise a bad request or not found response.
+        /// </returns>
+        [HttpPatch("{id}/tag-number")]
+        public async Task<IActionResult> UpdateVisitTagNumber(int id, [FromBody] UpdateVisitTagNumberDto dto)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            if (string.IsNullOrWhiteSpace(dto.TagNumber))
+                return BadRequest("Tag number cannot be empty.");
+
+            var visit = await _visitRepository.UpdateTagNumberAsync(id, dto.TagNumber.Trim());
+            if (visit == null) return NotFound();
+
+            return Ok(visit.ToVisitDto());
+        }
+
+        /// <summary>
         /// Updates the status of an existing visit to the supplied status value
         /// without modifying any other visit details.
         /// </summary>
