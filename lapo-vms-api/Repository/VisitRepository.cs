@@ -98,6 +98,18 @@ public class VisitRepository : IVisitRepository
         return existing;
     }
 
+    public async Task<Visit?> UpdateTagNumberAsync(int visitId, string tagNumber)
+    {
+        var existing = await _context.Visit
+                .Include(v => v.VisitItems)
+                .FirstOrDefaultAsync(v => v.Id == visitId);
+        if (existing == null) return null;
+
+        existing.TagNumber = tagNumber;
+        await _context.SaveChangesAsync();
+        return existing;
+    }
+
     public async Task<Visit?> UpdateStatusAsync(int visitId, VisitStatus status)
     {
         var existing = await _context.Visit
