@@ -195,6 +195,30 @@ namespace lapo_vms_api.Controllers
         }
 
         /// <summary>
+        /// Checks in a pending visit by setting the status to rejected.
+        /// </summary>
+        /// <param name="id">The unique ID of the visit to reject.</param>
+        /// <returns>
+        /// The updated visit record when reject is successful; otherwise a bad request or not found response.
+        /// </returns>
+        [HttpPatch("{id}/reject")]
+        public async Task<IActionResult> RejectVisit(int id)
+        {
+            var visit = await _visitRepository.GetByIdAsync(id);
+            if (visit == null) return NotFound();
+
+            if (visit.Status != VisitStatus.Pending)
+                return BadRequest("Only pending visits can be rejected.");
+
+            visit.CheckInTime = DateTime.UtcNow;
+            visit.Status = VisitStatus.Rejected;
+
+            await _visitRepository.UpdateStatusAsync(id, VisitStatus.Rejected);
+
+            return Ok(visit.ToVisitDto());
+        }
+
+        /// <summary>
         /// Updates the status of an existing visit to the supplied status value
         /// without modifying any other visit details.
         /// </summary>
