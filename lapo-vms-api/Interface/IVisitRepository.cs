@@ -14,6 +14,7 @@ public interface IVisitRepository
 
     Task<Visit?> UpdateTagNumberAsync(int visitId, string tagNumber);
     Task<Visit?> UpdateStatusAsync(int visitId, VisitStatus status);
+    Task<Visit?> CheckInAsync(int visitId, DateTime checkInTime, string checkedInBy);
     Task<Visit?> CheckOutAsync(int visitId, DateTime checkOutTime, string checkedOutBy);
     Task<Visit?> RescheduleAsync(int visitId, DateTime rescheduleDate);
     Task<Visit?> DeleteAsync(int id);

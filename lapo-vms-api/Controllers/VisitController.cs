@@ -111,6 +111,7 @@ namespace lapo_vms_api.Controllers
                 HostName = dto.HostName,
                 HostDepartment = dto.HostDepartment,
                 CheckInTime = DateTime.UtcNow,
+                CheckedInBy = string.Empty,
                 CheckedOutBy = string.Empty,
                 Status = VisitStatus.Pending,
                 VisitItems = visitItems
@@ -125,11 +126,10 @@ namespace lapo_vms_api.Controllers
         }
 
         /// <summary>
-        /// Checks out an existing visit by setting the checkout time to the current UTC time
-        /// and updating the visit status to checked out.
+        /// Checks out an existing visit and records whether the action was performed by the guest or staff.
         /// </summary>
         /// <param name="id">The unique ID of the visit to check out.</param>
-        /// <param name="dto">The payload containing the ID of the admin performing the checkout.</param>
+        /// <param name="dto">The payload containing the actor type and actor value for checkout.</param>
         /// <returns>
         /// The updated visit record when checkout is successful; otherwise a bad request or not found response.
         /// </returns>
@@ -144,17 +144,22 @@ namespace lapo_vms_api.Controllers
             if (visit.Status == VisitStatus.CheckedOut)
                 return BadRequest("Visit is already checked out.");
 
-            var user = await _userRepository.GetByStaffIdAsync(dto.StaffId);
-            if (user == null) return NotFound("User not found.");
+            if (string.IsNullOrWhiteSpace(dto.Value))
+                return BadRequest("Checkout actor value is required.");
 
-            if (user.Role != UserRole.Admin && user.Role != UserRole.SuperAdmin)
-                return BadRequest("Only admins can check out visits.");
+            string checkedOutBy;
 
-            var checkedOutBy = !string.IsNullOrWhiteSpace(user.Name)
-                ? user.Name
-                : !string.IsNullOrWhiteSpace(user.Email)
-                    ? user.Email
-                    : user.StaffId ?? string.Empty;
+            if (dto.ActorType == CheckOutActorType.Staff)
+            {
+                var user = await _userRepository.GetByStaffIdAsync(dto.Value.Trim());
+                if (user == null) return NotFound("User not found.");
+
+                checkedOutBy = user.Name ?? string.Empty;
+            }
+            else
+            {
+                checkedOutBy = dto.Value.Trim();
+            }
 
             var updatedVisit = await _visitRepository.CheckOutAsync(id, DateTime.UtcNow, checkedOutBy);
             if (updatedVisit == null) return BadRequest("Visit is already checked out.");

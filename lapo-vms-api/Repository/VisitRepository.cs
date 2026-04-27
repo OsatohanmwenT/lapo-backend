@@ -37,6 +37,9 @@ public class VisitRepository : IVisitRepository
     {
         var query = _context.Visit
                 .Include(v => v.Visitor)
+                    .ThenInclude(v => v.Identification)
+                .Include(v => v.Visitor)
+                    .ThenInclude(v => v.WorkerDetails)
                 .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(queryParameters.Search))
@@ -68,6 +71,9 @@ public class VisitRepository : IVisitRepository
     {
         return await _context.Visit
                     .Include(v => v.Visitor)
+                        .ThenInclude(v => v.Identification)
+                 .Include(v => v.Visitor)
+                        .ThenInclude(v => v.WorkerDetails)
                  .Include(v => v.VisitItems)
                  .FirstOrDefaultAsync(v => v.Id == id);
     }
@@ -75,6 +81,10 @@ public class VisitRepository : IVisitRepository
     public async Task<List<Visit>> GetByStatusAsync(VisitStatus status)
     {
         return await _context.Visit
+                 .Include(v => v.Visitor)
+                    .ThenInclude(v => v.Identification)
+                 .Include(v => v.Visitor)
+                    .ThenInclude(v => v.WorkerDetails)
                  .Where(v => v.Status == status)
                  .ToListAsync();
     }
@@ -82,6 +92,10 @@ public class VisitRepository : IVisitRepository
     public async Task<List<Visit>> GetByVisitorIdAsync(int visitorId)
     {
         return await _context.Visit
+                .Include(v => v.Visitor)
+                    .ThenInclude(v => v.Identification)
+                .Include(v => v.Visitor)
+                    .ThenInclude(v => v.WorkerDetails)
                 .Where(v => v.VisitorId == visitorId)
                 .ToListAsync();
     }
@@ -93,7 +107,7 @@ public class VisitRepository : IVisitRepository
 
         existing.Status = visitModel.Status;
         existing.CheckOutTime = visitModel.CheckOutTime;
-        existing.CheckedOutBy = visitModel.CheckedOutBy;
+        // existing.CheckedOutBy = visitModel.CheckedOutBy;
 
         await _context.SaveChangesAsync();
         return existing;
@@ -122,6 +136,20 @@ public class VisitRepository : IVisitRepository
         await _context.SaveChangesAsync();
         return existing;
 
+    }
+
+    public async Task<Visit?> CheckInAsync(int visitId, DateTime checkInTime, string checkedInBy)
+    {
+        var existing = await _context.Visit
+                .FirstOrDefaultAsync(v => v.Id == visitId && v.Status == VisitStatus.Pending);
+        if (existing == null) return null;
+
+        existing.CheckInTime = checkInTime;
+        existing.CheckedInBy = checkedInBy;
+        existing.Status = VisitStatus.CheckedIn;
+
+        await _context.SaveChangesAsync();
+        return existing;
     }
 
     public async Task<Visit?> CheckOutAsync(int visitId, DateTime checkOutTime, string checkedOutBy)

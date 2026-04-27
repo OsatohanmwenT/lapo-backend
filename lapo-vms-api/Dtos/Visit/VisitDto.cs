@@ -7,6 +7,7 @@ public class VisitDto
 {
     public int Id { get; set; }
     public int VisitorId { get; set; }
+    public VisitVisitorDto? Visitor { get; set; }
     public string PurposeOfVisit { get; set; } = string.Empty;
     public string? TagNumber { get; set; }
     public string FloorNumber { get; set; } = string.Empty;
@@ -15,6 +16,7 @@ public class VisitDto
     public DateTime? RescheduleDate { get; set; }
     public DateTime RegisteredAt { get; set; }
     public DateTime CheckInTime { get; set; }
+    public string CheckedInBy { get; set; } = string.Empty;
     public DateTime? CheckOutTime { get; set; }
     public string CheckedOutBy { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;

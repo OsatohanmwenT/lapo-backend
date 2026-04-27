@@ -11,6 +11,18 @@ public static class VisitMapper
         {
             Id = visit.Id,
             VisitorId = visit.VisitorId,
+            Visitor = visit.Visitor == null
+                ? null
+                : new VisitVisitorDto
+                {
+                    Id = visit.Visitor.Id,
+                    FullName = visit.Visitor.FullName,
+                    PhoneNumber = visit.Visitor.PhoneNumber,
+                    PhotoPath = visit.Visitor.PhotoPath ?? string.Empty,
+                    VisitorType = visit.Visitor.VisitorType.ToString(),
+                    Identification = visit.Visitor.Identification?.ToVisitorIdentificationDto(),
+                    WorkerDetails = visit.Visitor.WorkerDetails?.ToWorkerDetailsDto(),
+                },
             PurposeOfVisit = visit.PurposeOfVisit,
             TagNumber = visit.TagNumber,
             FloorNumber = visit.FloorNumber,
@@ -19,6 +31,7 @@ public static class VisitMapper
             RescheduleDate = visit.RescheduleDate,
             RegisteredAt = visit.RegisteredAt,
             CheckInTime = visit.CheckInTime,
+            CheckedInBy = visit.CheckedInBy,
             CheckOutTime = visit.CheckOutTime,
             CheckedOutBy = visit.CheckedOutBy,
             Status = visit.Status.ToString(),
@@ -38,6 +51,7 @@ public static class VisitMapper
             RegisteredAt = DateTime.UtcNow,
             CheckInTime = DateTime.UtcNow,
             Status = VisitStatus.Pending,
+            CheckedInBy = string.Empty,
             CheckedOutBy = string.Empty
         };
     }
