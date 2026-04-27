@@ -166,20 +166,17 @@ namespace lapo_vms_api.Controllers
         /// Reschedules an existing visit to a new date and marks the visit status as rescheduled.
         /// </summary>
         /// <param name="id">The unique ID of the visit to reschedule.</param>
-        /// <param name="newDate">The new date and time that should be stored for the visit reschedule.</param>
+        /// <param name="dto">The payload containing the new reschedule date and time.</param>
         /// <returns>
         /// The updated visit record when the visit exists; otherwise a not found response.
         /// </returns>
         [HttpPatch("{id}/reschedule")]
-        public async Task<IActionResult> RescheduleVisit(int id, [FromBody] DateTime newDate)
+        public async Task<IActionResult> RescheduleVisit(int id, [FromBody] RescheduleVisitDto dto)
         {
-            var visit = await _visitRepository.GetByIdAsync(id);
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            var visit = await _visitRepository.RescheduleAsync(id, dto.RescheduleDate);
             if (visit == null) return NotFound();
-
-            visit.RescheduleDate = newDate;
-            visit.Status = VisitStatus.Rescheduled;
-
-            await _visitRepository.UpdateStatusAsync(id, VisitStatus.Rescheduled);
 
             return Ok(visit.ToVisitDto());
         }

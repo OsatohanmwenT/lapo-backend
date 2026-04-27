@@ -138,6 +138,19 @@ public class VisitRepository : IVisitRepository
         return existing;
     }
 
+    public async Task<Visit?> RescheduleAsync(int visitId, DateTime rescheduleDate)
+    {
+        var existing = await _context.Visit
+                .FirstOrDefaultAsync(v => v.Id == visitId);
+        if (existing == null) return null;
+
+        existing.RescheduleDate = rescheduleDate;
+        existing.Status = VisitStatus.Rescheduled;
+
+        await _context.SaveChangesAsync();
+        return existing;
+    }
+
     public async Task<List<ExportVisitsDto>?> GetVisitsForExportAsync(VisitExportRequest request)
     {
         var query = _context.Visit
