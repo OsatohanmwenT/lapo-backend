@@ -5,6 +5,7 @@ namespace lapo_vms_api.Data;
 
 public class ApplicationDBContext(DbContextOptions<ApplicationDBContext> options) : DbContext(options)
 {
+    public DbSet<User> User => Set<User>();
     public DbSet<Visit> Visit => Set<Visit>();
     public DbSet<Visitor> Visitor => Set<Visitor>();
     public DbSet<VisitItem> VisitItem => Set<VisitItem>();

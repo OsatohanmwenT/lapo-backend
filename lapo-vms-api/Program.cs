@@ -36,6 +36,7 @@ builder.Services.AddOpenApi(options =>
 builder.Services.AddScoped<IVisitorRepository, VisitorRepository>();
 builder.Services.AddScoped<IVisitRepository, VisitRepository>();
 builder.Services.AddScoped<IVisitItemRepository, VisitItemRepository>();
+builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IExportService, ExportService>();
 
 
