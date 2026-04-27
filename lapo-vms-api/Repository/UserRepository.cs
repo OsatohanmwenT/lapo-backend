@@ -1,4 +1,5 @@
 using lapo_vms_api.Data;
+using lapo_vms_api.Helpers;
 using lapo_vms_api.Interface;
 using lapo_vms_api.Model;
 using Microsoft.EntityFrameworkCore;
@@ -8,6 +9,35 @@ namespace lapo_vms_api.Repository;
 public class UserRepository(ApplicationDBContext context) : IUserRepository
 {
     private readonly ApplicationDBContext _context = context;
+
+    public async Task<List<User>> GetAllAsync(QueryParameters queryParameters)
+    {
+        var users = _context.User.AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(queryParameters.Search))
+        {
+            users = users.Where(u =>
+                (u.Name != null && u.Name.Contains(queryParameters.Search)) ||
+                (u.Email != null && u.Email.Contains(queryParameters.Search))
+            );
+        }
+
+        return await users
+            .OrderByDescending(u => u.CreatedAt)
+            .Skip((queryParameters.PageNumber - 1) * queryParameters.PageSize)
+            .Take(queryParameters.PageSize)
+            .ToListAsync();
+    }
+
+    public async Task<User?> GetByIdAsync(int id)
+    {
+        return await _context.User.FirstOrDefaultAsync(u => u.Id == id);
+    }
+    
+    public async Task<User?> GetByStaffIdAsync(string staffId)
+    {
+        return await _context.User.FirstOrDefaultAsync(u => u.StaffId == staffId);
+    }
 
     public async Task<User> CreateAsync(User userModel)
     {

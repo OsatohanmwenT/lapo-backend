@@ -124,6 +124,20 @@ public class VisitRepository : IVisitRepository
 
     }
 
+    public async Task<Visit?> CheckOutAsync(int visitId, DateTime checkOutTime, string checkedOutBy)
+    {
+        var existing = await _context.Visit
+                .FirstOrDefaultAsync(v => v.Id == visitId && v.Status != VisitStatus.CheckedOut);
+        if (existing == null) return null;
+
+        existing.CheckOutTime = checkOutTime;
+        existing.CheckedOutBy = checkedOutBy;
+        existing.Status = VisitStatus.CheckedOut;
+
+        await _context.SaveChangesAsync();
+        return existing;
+    }
+
     public async Task<List<ExportVisitsDto>?> GetVisitsForExportAsync(VisitExportRequest request)
     {
         var query = _context.Visit

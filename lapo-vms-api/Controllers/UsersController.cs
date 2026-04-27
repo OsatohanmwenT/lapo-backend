@@ -1,4 +1,5 @@
 using lapo_vms_api.Dtos.User;
+using lapo_vms_api.Helpers;
 using lapo_vms_api.Interface;
 using lapo_vms_api.Model;
 using Microsoft.AspNetCore.Mvc;
@@ -10,6 +11,22 @@ namespace lapo_vms_api.Controllers;
 public class UsersController(IUserRepository userRepository) : ControllerBase
 {
     private readonly IUserRepository _userRepository = userRepository;
+
+    [HttpGet]
+    public async Task<IActionResult> GetAllUsers([FromQuery] QueryParameters queryParameters)
+    {
+        var users = await _userRepository.GetAllAsync(queryParameters);
+        return Ok(users.Select(ToUserDto));
+    }
+
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetById([FromRoute] int id)
+    {
+        var user = await _userRepository.GetByIdAsync(id);
+        if (user == null) return NotFound();
+
+        return Ok(ToUserDto(user));
+    }
 
     [HttpPost]
     public async Task<IActionResult> CreateUser([FromBody] CreateUserDto dto)

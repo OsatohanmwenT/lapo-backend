@@ -10,10 +10,11 @@ namespace lapo_vms_api.Controllers
 {
     [Route("api/visits")]
     [ApiController]
-    public class VisitController(IVisitRepository visitRepository, IExportService exportService) : ControllerBase
+    public class VisitController(IVisitRepository visitRepository, IExportService exportService, IUserRepository userRepository) : ControllerBase
     {
         private readonly IVisitRepository _visitRepository = visitRepository;
         private readonly IExportService _exportService = exportService;
+        private readonly IUserRepository _userRepository = userRepository;
 
         /// <summary>
         /// Retrieves all visit records and applies any supplied query filters,
@@ -128,25 +129,37 @@ namespace lapo_vms_api.Controllers
         /// and updating the visit status to checked out.
         /// </summary>
         /// <param name="id">The unique ID of the visit to check out.</param>
+        /// <param name="dto">The payload containing the ID of the admin performing the checkout.</param>
         /// <returns>
         /// The updated visit record when checkout is successful; otherwise a bad request or not found response.
         /// </returns>
         [HttpPatch("{id}/checkout")]
-        public async Task<IActionResult> CheckOutVisit(int id)
+        public async Task<IActionResult> CheckOutVisit(int id, [FromBody] CheckOutVisitDto dto)
         {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
             var visit = await _visitRepository.GetByIdAsync(id);
             if (visit == null) return NotFound();
 
             if (visit.Status == VisitStatus.CheckedOut)
                 return BadRequest("Visit is already checked out.");
 
-            visit.CheckOutTime = DateTime.UtcNow;
-            // visit.CheckedOutBy = dto.CheckedOutBy;
-            visit.Status = VisitStatus.CheckedOut;
+            var user = await _userRepository.GetByStaffIdAsync(dto.StaffId);
+            if (user == null) return NotFound("User not found.");
 
-            await _visitRepository.UpdateStatusAsync(id, VisitStatus.CheckedOut);
+            if (user.Role != UserRole.Admin && user.Role != UserRole.SuperAdmin)
+                return BadRequest("Only admins can check out visits.");
 
-            return Ok(visit.ToVisitDto());
+            var checkedOutBy = !string.IsNullOrWhiteSpace(user.Name)
+                ? user.Name
+                : !string.IsNullOrWhiteSpace(user.Email)
+                    ? user.Email
+                    : user.StaffId ?? string.Empty;
+
+            var updatedVisit = await _visitRepository.CheckOutAsync(id, DateTime.UtcNow, checkedOutBy);
+            if (updatedVisit == null) return BadRequest("Visit is already checked out.");
+
+            return Ok(updatedVisit.ToVisitDto());
         }
 
         /// <summary>

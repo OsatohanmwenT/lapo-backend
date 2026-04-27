@@ -1,4 +1,5 @@
 using System;
+using lapo_vms_api.Dtos.Visitor;
 using lapo_vms_api.Helpers;
 using lapo_vms_api.Model;
 
@@ -11,4 +12,5 @@ public interface IVisitorRepository
     Task<Visitor> CreateAsync(Visitor visitorModel);
     Task<Visitor?> UpdateAsync(int id, Visitor visitorModel);
     Task<Visitor?> DeleteAsync(int id);
+    Task<List<VisitorExportDto>> GetVisitorsForExportAsync(VisitorExportRequest request);
 }

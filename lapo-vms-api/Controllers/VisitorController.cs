@@ -1,4 +1,5 @@
 using lapo_vms_api.Dtos.Visitor;
+using lapo_vms_api.Dtos;
 using lapo_vms_api.Helpers;
 using lapo_vms_api.Interface;
 using lapo_vms_api.Mappers;
@@ -8,9 +9,10 @@ namespace lapo_vms_api.Controllers;
 
 [Route("api/visitors")]
 [ApiController]
-public class VisitorController(IVisitorRepository visitorRepository) : ControllerBase
+public class VisitorController(IVisitorRepository visitorRepository, IExportService exportService) : ControllerBase
 {
     private readonly IVisitorRepository _visitorRepository = visitorRepository;
+    private readonly IExportService _exportService = exportService;
 
     /// <summary>
     /// Retrieves the list of registered visitors and applies any supplied query filters,
@@ -71,5 +73,39 @@ public class VisitorController(IVisitorRepository visitorRepository) : Controlle
         var created = await _visitorRepository.CreateAsync(visitor);
 
         return Ok(created.ToVisitorDto());
+    }
+
+    [HttpGet("export")]
+    public async Task<IActionResult> ExportVisitors([FromQuery] VisitorExportRequest request)
+    {
+        var visitorsForExport = await _visitorRepository.GetVisitorsForExportAsync(request);
+        if (!visitorsForExport.Any())
+            return NotFound("No visitors found for the specified export criteria.");
+
+        byte[] fileContent;
+        string fileName;
+
+        if (request.Format == ExportType.Csv)
+        {
+            visitorsForExport.ForEach(v => v.PhoneNumber = $"=\"{v.PhoneNumber}\"");
+            fileContent = _exportService.ExportToCsv(visitorsForExport);
+            fileName = $"Visitor_Export_{DateTime.UtcNow:yyyyMMddHHmmss}.csv";
+
+            return File(fileContent, "text/csv", fileName);
+        }
+
+        if (request.Format == ExportType.Excel)
+        {
+            fileContent = _exportService.ExportToExcel(visitorsForExport, "Visitors");
+            fileName = $"Visitor_Export_{DateTime.UtcNow:yyyyMMddHHmmss}.xlsx";
+
+            return File(
+                fileContent,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                fileName
+            );
+        }
+
+        return BadRequest("Invalid export format.");
     }
 }

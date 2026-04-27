@@ -1,4 +1,5 @@
 using lapo_vms_api.Data;
+using lapo_vms_api.Dtos.Visitor;
 using lapo_vms_api.Helpers;
 using lapo_vms_api.Interface;
 using lapo_vms_api.Model;
@@ -82,5 +83,34 @@ public class VisitorRepository(ApplicationDBContext context) : IVisitorRepositor
 
         await _context.SaveChangesAsync();
         return existing;
+    }
+
+    public async Task<List<VisitorExportDto>> GetVisitorsForExportAsync(VisitorExportRequest request)
+    {
+        var visitors = _context.Visitor.AsQueryable();
+
+        if (request.StartDate.HasValue)
+        {
+            visitors = visitors.Where(v => v.CreatedAt >= request.StartDate.Value);
+        }
+
+        if (request.EndDate.HasValue)
+        {
+            visitors = visitors.Where(v => v.CreatedAt <= request.EndDate.Value);
+        }
+
+        return await visitors
+            .OrderByDescending(v => v.CreatedAt)
+            .Select(v => new VisitorExportDto
+            {
+                FullName = v.FullName,
+                PhoneNumber = v.PhoneNumber,
+                VisitorType = v.VisitorType.ToString(),
+                CompanyName = v.WorkerDetails != null ? v.WorkerDetails.CompanyName : string.Empty,
+                IdentificationType = v.Identification != null ? v.Identification.IdentificationType : string.Empty,
+                IdentificationNumber = v.Identification != null ? v.Identification.IdentificationNumber : string.Empty,
+                CreatedAt = v.CreatedAt
+            })
+            .ToListAsync();
     }
 }
