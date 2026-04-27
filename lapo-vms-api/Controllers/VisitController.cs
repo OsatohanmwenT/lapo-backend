@@ -1,3 +1,4 @@
+using lapo_vms_api.Dtos;
 using lapo_vms_api.Dtos.Visit;
 using lapo_vms_api.Helpers;
 using lapo_vms_api.Interface;
@@ -9,9 +10,10 @@ namespace lapo_vms_api.Controllers
 {
     [Route("api/visits")]
     [ApiController]
-    public class VisitController(IVisitRepository visitRepository) : ControllerBase
+    public class VisitController(IVisitRepository visitRepository, IExportService exportService) : ControllerBase
     {
         private readonly IVisitRepository _visitRepository = visitRepository;
+        private readonly IExportService _exportService = exportService;
 
         /// <summary>
         /// Retrieves all visit records and applies any supplied query filters,
@@ -260,6 +262,42 @@ namespace lapo_vms_api.Controllers
             await _visitRepository.UpdateStatusAsync(id, status);
 
             return Ok(visit.ToVisitDto());
+        }
+
+        [HttpGet("export")]
+        public async Task<IActionResult> ExportVisits([FromQuery] VisitExportRequest request)
+        {
+            var visitsForExport = await _visitRepository.GetVisitsForExportAsync(request);
+            if (visitsForExport == null || !visitsForExport.Any())
+                return NotFound("No visits found for the specified export criteria.");
+
+
+            byte[] fileContent;
+            string fileName;
+
+            if (request.Format == ExportType.Csv)
+            {
+                visitsForExport.ForEach(v => v.VisitorPhoneNumber = $"=\"{v.VisitorPhoneNumber}\"");
+                fileContent = _exportService.ExportToCsv(visitsForExport);
+                fileName = $"Visit_Export_{DateTime.UtcNow:yyyyMMddHHmmss}.csv";
+
+                return File(fileContent, "text/csv", fileName);
+            }
+
+            if (request.Format == ExportType.Excel)
+            {
+                fileContent = _exportService.ExportToExcel(visitsForExport, "Visits");
+                fileName = $"Visit_Export_{DateTime.UtcNow:yyyyMMddHHmmss}.xlsx";
+
+                return File(
+                    fileContent,
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    fileName
+                );
+            }
+
+            return BadRequest("Invalid export format.");
+
         }
 
     }

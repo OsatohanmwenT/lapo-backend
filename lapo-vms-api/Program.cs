@@ -1,6 +1,7 @@
 using lapo_vms_api.Data;
 using lapo_vms_api.Interface;
 using lapo_vms_api.Repository;
+using lapo_vms_api.Services;
 using Scalar.AspNetCore;
 using System.Reflection;
 using System.Text.Json.Serialization;
@@ -35,6 +36,7 @@ builder.Services.AddOpenApi(options =>
 builder.Services.AddScoped<IVisitorRepository, VisitorRepository>();
 builder.Services.AddScoped<IVisitRepository, VisitRepository>();
 builder.Services.AddScoped<IVisitItemRepository, VisitItemRepository>();
+builder.Services.AddScoped<IExportService, ExportService>();
 
 
 builder.Services.AddCors(options =>

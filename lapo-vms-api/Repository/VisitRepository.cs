@@ -1,4 +1,5 @@
 using lapo_vms_api.Data;
+using lapo_vms_api.Dtos.Visit;
 using lapo_vms_api.Helpers;
 using lapo_vms_api.Interface;
 using lapo_vms_api.Model;
@@ -121,5 +122,48 @@ public class VisitRepository : IVisitRepository
         await _context.SaveChangesAsync();
         return existing;
 
+    }
+
+    public async Task<List<ExportVisitsDto>?> GetVisitsForExportAsync(VisitExportRequest request)
+    {
+        var query = _context.Visit
+                .Include(v => v.Visitor)
+                    .ThenInclude(v => v.WorkerDetails)
+                .Include(v => v.Visitor)
+                    .ThenInclude(v => v.Identification)
+                .AsQueryable();
+
+        if (request.StartDate.HasValue)
+        {
+            query = query.Where(v => v.RegisteredAt >= request.StartDate.Value);
+        }
+
+        if (request.EndDate.HasValue)
+        {
+            query = query.Where(v => v.RegisteredAt <= request.EndDate.Value);
+        }
+
+        return await query
+        .Select(v => new ExportVisitsDto
+        {
+            VisitorName = v.Visitor.FullName,
+            VisitorPhoneNumber = v.Visitor.PhoneNumber,
+            PurposeOfVisit = v.PurposeOfVisit,
+            TagNumber = v.TagNumber,
+            FloorNumber = v.FloorNumber,
+            CompanyName = v.Visitor.WorkerDetails != null ? v.Visitor.WorkerDetails.CompanyName : string.Empty,
+            IdentificationType = v.Visitor.Identification != null ? v.Visitor.Identification.IdentificationType : string.Empty,
+            IdentificationNumber = v.Visitor.Identification != null ? v.Visitor.Identification.IdentificationNumber : string.Empty,
+
+            HostName = v.HostName,
+            HostDepartment = v.HostDepartment,
+
+            RegisteredAt = v.RegisteredAt,
+            CheckInTime = v.CheckInTime,
+            CheckOutTime = v.CheckOutTime,
+
+            Status = v.Status.ToString()
+        })
+        .ToListAsync();
     }
 }

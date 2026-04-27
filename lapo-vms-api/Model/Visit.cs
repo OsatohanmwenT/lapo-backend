@@ -21,6 +21,5 @@ namespace lapo_vms_api.Model
     public VisitStatus Status { get; set; } = VisitStatus.Pending;
     public ICollection<VisitItem> VisitItems { get; set; } = new List<VisitItem>();
 
-
     }
 }

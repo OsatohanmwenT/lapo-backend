@@ -1,4 +1,5 @@
 using System;
+using lapo_vms_api.Dtos.Visit;
 using lapo_vms_api.Helpers;
 using lapo_vms_api.Model;
 
@@ -17,4 +18,6 @@ public interface IVisitRepository
 
     Task<List<Visit>> GetByVisitorIdAsync(int visitorId);
     Task<List<Visit>> GetByStatusAsync(VisitStatus status);
+
+    Task<List<ExportVisitsDto>?> GetVisitsForExportAsync(VisitExportRequest request);
 }

@@ -1,5 +1,3 @@
-using System;
-
 namespace lapo_vms_api.Helpers;
 
 public class QueryParameters
