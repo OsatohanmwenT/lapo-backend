@@ -46,16 +46,12 @@ public class VisitorRepository(ApplicationDBContext context) : IVisitorRepositor
 
         if (!string.IsNullOrWhiteSpace(queryParameters.Status))
         {
-            var match = Enum.GetValues<VisitStatus>()
-                .Cast<VisitStatus>()
-                .FirstOrDefault(s => s.ToString().Contains(queryParameters.Status,
-                    StringComparison.OrdinalIgnoreCase));
-
-            if (Enum.IsDefined(typeof(VisitStatus), match))
+            if (Enum.TryParse<VisitStatus>(queryParameters.Status, true, out var status))
             {
-                visitors = visitors.Where(v => v.Visits.Any(visit => visit.Status == match));
+                visitors = visitors.Where(v => v.Visits.Any(visit => visit.Status == status));
             }
         }
+
 
 
         return await visitors

@@ -49,14 +49,9 @@ public class VisitRepository : IVisitRepository
 
         if (!string.IsNullOrWhiteSpace(queryParameters.Status))
         {
-            var match = Enum.GetValues<VisitStatus>()
-                .Cast<VisitStatus>()
-                .FirstOrDefault(s => s.ToString().Contains(queryParameters.Status,
-                    StringComparison.OrdinalIgnoreCase));
-
-            if (Enum.IsDefined(typeof(VisitStatus), match))
+            if (Enum.TryParse<VisitStatus>(queryParameters.Status, true, out var status))
             {
-                query = query.Where(v => v.Status == match);
+                query = query.Where(v => v.Status == status);
             }
         }
 
