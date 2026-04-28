@@ -193,6 +193,11 @@ public class VisitRepository : IVisitRepository
             query = query.Where(v => v.RegisteredAt <= request.EndDate.Value);
         }
 
+        if (request.Status.HasValue)
+        {
+            query = query.Where(v => v.Status == request.Status.Value);
+        }
+
         return await query
         .Select(v => new ExportVisitsDto
         {
