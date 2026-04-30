@@ -15,7 +15,7 @@ public class VisitDto
     public string? HostDepartment { get; set; }
     public DateTime? RescheduleDate { get; set; }
     public DateTime RegisteredAt { get; set; }
-    public DateTime CheckInTime { get; set; }
+    public DateTime? CheckInTime { get; set; }
     public string CheckedInBy { get; set; } = string.Empty;
     public DateTime? CheckOutTime { get; set; }
     public string CheckedOutBy { get; set; } = string.Empty;

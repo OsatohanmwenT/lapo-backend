@@ -49,7 +49,6 @@ public static class VisitMapper
             HostName = dto.HostName,
             HostDepartment = dto.HostDepartment,
             RegisteredAt = DateTime.UtcNow,
-            CheckInTime = DateTime.UtcNow,
             Status = VisitStatus.Pending,
             CheckedInBy = string.Empty,
             CheckedOutBy = string.Empty

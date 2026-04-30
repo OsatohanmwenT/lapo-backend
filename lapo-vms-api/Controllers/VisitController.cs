@@ -4,7 +4,9 @@ using lapo_vms_api.Helpers;
 using lapo_vms_api.Interface;
 using lapo_vms_api.Mappers;
 using lapo_vms_api.Model;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace lapo_vms_api.Controllers
 {
@@ -30,6 +32,17 @@ namespace lapo_vms_api.Controllers
         public async Task<IActionResult> GetAllVisits([FromQuery] QueryParameters queryParameters)
         {
             var visits = await _visitRepository.GetAllAsync(queryParameters);
+            return Ok(visits.Select(v => v.ToVisitDto()));
+        }
+
+        [HttpGet("guest-search")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GuestSearch([FromQuery] string search)
+        {
+            if (string.IsNullOrWhiteSpace(search))
+                return BadRequest("Search value is required.");
+
+            var visits = await _visitRepository.GuestSearchAsync(search.Trim());
             return Ok(visits.Select(v => v.ToVisitDto()));
         }
 
@@ -110,7 +123,6 @@ namespace lapo_vms_api.Controllers
                 FloorNumber = dto.FloorNumber,
                 HostName = dto.HostName,
                 HostDepartment = dto.HostDepartment,
-                CheckInTime = DateTime.UtcNow,
                 CheckedInBy = string.Empty,
                 CheckedOutBy = string.Empty,
                 Status = VisitStatus.Pending,
@@ -134,6 +146,7 @@ namespace lapo_vms_api.Controllers
         /// The updated visit record when checkout is successful; otherwise a bad request or not found response.
         /// </returns>
         [HttpPatch("{id}/checkout")]
+        [AllowAnonymous]
         public async Task<IActionResult> CheckOutVisit(int id, [FromBody] CheckOutVisitDto dto)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
@@ -141,8 +154,8 @@ namespace lapo_vms_api.Controllers
             var visit = await _visitRepository.GetByIdAsync(id);
             if (visit == null) return NotFound();
 
-            if (visit.Status == VisitStatus.CheckedOut)
-                return BadRequest("Visit is already checked out.");
+            if (visit.Status != VisitStatus.CheckedIn)
+                return BadRequest("Only checked-in visits can be checked out.");
 
             if (string.IsNullOrWhiteSpace(dto.Value))
                 return BadRequest("Checkout actor value is required.");
@@ -151,6 +164,9 @@ namespace lapo_vms_api.Controllers
 
             if (dto.ActorType == CheckOutActorType.Staff)
             {
+                if (User.Identity?.IsAuthenticated != true)
+                    return Unauthorized(new { message = "Authentication required for staff checkout." });
+
                 var user = await _userRepository.GetByStaffIdAsync(dto.Value.Trim());
                 if (user == null) return NotFound("User not found.");
 
@@ -162,7 +178,7 @@ namespace lapo_vms_api.Controllers
             }
 
             var updatedVisit = await _visitRepository.CheckOutAsync(id, DateTime.UtcNow, checkedOutBy);
-            if (updatedVisit == null) return BadRequest("Visit is already checked out.");
+            if (updatedVisit == null) return BadRequest("Only checked-in visits can be checked out.");
 
             return Ok(updatedVisit.ToVisitDto());
         }
@@ -203,12 +219,15 @@ namespace lapo_vms_api.Controllers
             if (visit.Status != VisitStatus.Pending)
                 return BadRequest("Only pending visits can be checked in.");
 
-            visit.CheckInTime = DateTime.UtcNow;
-            visit.Status = VisitStatus.CheckedIn;
+            var checkedInBy = User.FindFirstValue(ClaimTypes.Name)
+                ?? User.FindFirstValue("staffId")
+                ?? User.FindFirstValue(ClaimTypes.NameIdentifier)
+                ?? string.Empty;
 
-            await _visitRepository.UpdateStatusAsync(id, VisitStatus.CheckedIn);
+            var updatedVisit = await _visitRepository.CheckInAsync(id, DateTime.UtcNow, checkedInBy);
+            if (updatedVisit == null) return BadRequest("Only pending visits can be checked in.");
 
-            return Ok(visit.ToVisitDto());
+            return Ok(updatedVisit.ToVisitDto());
         }
 
         /// <summary>
@@ -250,7 +269,6 @@ namespace lapo_vms_api.Controllers
             if (visit.Status != VisitStatus.Pending)
                 return BadRequest("Only pending visits can be rejected.");
 
-            visit.CheckInTime = DateTime.UtcNow;
             visit.Status = VisitStatus.Rejected;
 
             await _visitRepository.UpdateStatusAsync(id, VisitStatus.Rejected);

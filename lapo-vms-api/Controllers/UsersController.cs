@@ -23,7 +23,8 @@ public class UsersController(IUserRepository userRepository) : ControllerBase
     public async Task<IActionResult> GetById([FromRoute] int id)
     {
         var user = await _userRepository.GetByIdAsync(id);
-        if (user == null) return NotFound();
+        if (user == null) 
+            return Problem(detail: $"User with ID {id} was not found.", statusCode: StatusCodes.Status404NotFound, title: "User Not Found");
 
         return Ok(ToUserDto(user));
     }
@@ -31,16 +32,16 @@ public class UsersController(IUserRepository userRepository) : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CreateUser([FromBody] CreateUserDto dto)
     {
-        if (!ModelState.IsValid) return BadRequest(ModelState);
+        if (!ModelState.IsValid) return ValidationProblem(ModelState);
 
         var email = dto.Email.Trim();
         var staffId = dto.StaffId.Trim();
 
         if (await _userRepository.ExistsByEmailAsync(email))
-            return BadRequest("A user with this email already exists.");
+            return Problem(detail: "A user with this email already exists.", statusCode: StatusCodes.Status400BadRequest, title: "Duplicate Email");
 
         if (await _userRepository.ExistsByStaffIdAsync(staffId))
-            return BadRequest("A user with this staff ID already exists.");
+            return Problem(detail: "A user with this staff ID already exists.", statusCode: StatusCodes.Status400BadRequest, title: "Duplicate Staff ID");
 
         var user = new User
         {
@@ -58,16 +59,16 @@ public class UsersController(IUserRepository userRepository) : ControllerBase
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateUser([FromRoute] int id, [FromBody] UpdateUserDto dto)
     {
-        if (!ModelState.IsValid) return BadRequest(ModelState);
+        if (!ModelState.IsValid) return ValidationProblem(ModelState);
 
         var email = dto.Email.Trim();
         var staffId = dto.StaffId.Trim();
 
         if (await _userRepository.ExistsByEmailAsync(email, id))
-            return BadRequest("A user with this email already exists.");
+            return Problem(detail: "A user with this email already exists.", statusCode: StatusCodes.Status400BadRequest, title: "Duplicate Email");
 
         if (await _userRepository.ExistsByStaffIdAsync(staffId, id))
-            return BadRequest("A user with this staff ID already exists.");
+            return Problem(detail: "A user with this staff ID already exists.", statusCode: StatusCodes.Status400BadRequest, title: "Duplicate Staff ID");
 
         var user = new User
         {
@@ -78,7 +79,8 @@ public class UsersController(IUserRepository userRepository) : ControllerBase
         };
 
         var updatedUser = await _userRepository.UpdateAsync(id, user);
-        if (updatedUser == null) return NotFound();
+        if (updatedUser == null) 
+            return Problem(detail: $"User with ID {id} was not found.", statusCode: StatusCodes.Status404NotFound, title: "User Not Found");
 
         return Ok(ToUserDto(updatedUser));
     }
@@ -87,7 +89,8 @@ public class UsersController(IUserRepository userRepository) : ControllerBase
     public async Task<IActionResult> DeleteUser([FromRoute] int id)
     {
         var deletedUser = await _userRepository.DeleteAsync(id);
-        if (deletedUser == null) return NotFound();
+        if (deletedUser == null) 
+            return Problem(detail: $"User with ID {id} was not found.", statusCode: StatusCodes.Status404NotFound, title: "User Not Found");
 
         return Ok(ToUserDto(deletedUser));
     }
