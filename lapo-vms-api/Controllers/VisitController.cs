@@ -215,18 +215,20 @@ namespace lapo_vms_api.Controllers
         public async Task<IActionResult> CheckInVisit(int id)
         {
             var visit = await _visitRepository.GetByIdAsync(id);
-            if (visit == null) return NotFound();
+            if (visit == null) return NotFound("Visit not found.");
 
-            if (visit.Status != VisitStatus.Pending)
-                return BadRequest("Only pending visits can be checked in.");
+            if (visit.Status != VisitStatus.Pending && visit.Status != VisitStatus.Rescheduled)
+                return BadRequest("Only pending or rescheduled visits can be checked in.");
 
-            var checkedInBy = User.FindFirstValue(ClaimTypes.Name)
+            var checkedInBy = User.FindFirstValue(ClaimTypes.NameIdentifier)
                 ?? User.FindFirstValue("staffId")
-                ?? User.FindFirstValue(ClaimTypes.NameIdentifier)
-                ?? string.Empty;
+                ?? User.FindFirstValue(ClaimTypes.Name);
+
+            if (string.IsNullOrWhiteSpace(checkedInBy))
+                return Unauthorized("User identity could not be resolved.");
 
             var updatedVisit = await _visitRepository.CheckInAsync(id, DateTime.UtcNow, checkedInBy);
-            if (updatedVisit == null) return BadRequest("Only pending visits can be checked in.");
+            if (updatedVisit == null) return BadRequest("Only pending or rescheduled visits can be checked in.");
 
             return Ok(updatedVisit.ToVisitDto());
         }

@@ -154,7 +154,7 @@ public class VisitRepository : IVisitRepository
     public async Task<Visit?> CheckInAsync(int visitId, DateTime checkInTime, string checkedInBy)
     {
         var existing = await _context.Visit
-                .FirstOrDefaultAsync(v => v.Id == visitId && v.Status == VisitStatus.Pending);
+                .FirstOrDefaultAsync(v => v.Id == visitId && (v.Status == VisitStatus.Pending || v.Status == VisitStatus.Rescheduled));
         if (existing == null) return null;
 
         existing.CheckInTime = checkInTime;
