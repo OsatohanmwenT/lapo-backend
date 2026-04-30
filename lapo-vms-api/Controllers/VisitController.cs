@@ -75,6 +75,7 @@ namespace lapo_vms_api.Controllers
         /// </returns>
         [HttpPost]
         [Consumes("multipart/form-data")]
+        [AllowAnonymous]
         public async Task<IActionResult> CreateVisit([FromForm] CreateVisitDto dto)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
@@ -152,13 +153,13 @@ namespace lapo_vms_api.Controllers
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
             var visit = await _visitRepository.GetByIdAsync(id);
-            if (visit == null) return NotFound();
+            if (visit == null) return NotFound(new { message = "Visit not found." });
 
             if (visit.Status != VisitStatus.CheckedIn)
-                return BadRequest("Only checked-in visits can be checked out.");
+                return BadRequest(new { message = "Only checked-in visits can be checked out." });
 
             if (string.IsNullOrWhiteSpace(dto.Value))
-                return BadRequest("Checkout actor value is required.");
+                return BadRequest(new { message = "Checkout actor value is required." });
 
             string checkedOutBy;
 
@@ -168,7 +169,7 @@ namespace lapo_vms_api.Controllers
                     return Unauthorized(new { message = "Authentication required for staff checkout." });
 
                 var user = await _userRepository.GetByStaffIdAsync(dto.Value.Trim());
-                if (user == null) return NotFound("User not found.");
+                if (user == null) return NotFound(new { message = "User not found." });
 
                 checkedOutBy = user.Name ?? string.Empty;
             }
