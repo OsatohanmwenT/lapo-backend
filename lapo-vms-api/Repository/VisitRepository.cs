@@ -84,6 +84,24 @@ public class VisitRepository : IVisitRepository
                  .ToListAsync();
     }
 
+    public async Task<List<Visit>> GuestSearchAsync(string search)
+    {
+        return await _context.Visit
+                 .Include(v => v.Visitor)
+                    .ThenInclude(v => v.Identification)
+                 .Include(v => v.Visitor)
+                    .ThenInclude(v => v.WorkerDetails)
+                 .Include(v => v.VisitItems)
+                 .Where(v => v.Status == VisitStatus.CheckedIn)
+                 .Where(v =>
+                    v.Visitor.FullName.Contains(search) ||
+                    v.Visitor.PhoneNumber.Contains(search) ||
+                    (v.TagNumber != null && v.TagNumber.Contains(search)))
+                 .OrderByDescending(v => v.CheckInTime)
+                 .Take(10)
+                 .ToListAsync();
+    }
+
     public async Task<List<Visit>> GetByVisitorIdAsync(int visitorId)
     {
         return await _context.Visit
@@ -150,7 +168,7 @@ public class VisitRepository : IVisitRepository
     public async Task<Visit?> CheckOutAsync(int visitId, DateTime checkOutTime, string checkedOutBy)
     {
         var existing = await _context.Visit
-                .FirstOrDefaultAsync(v => v.Id == visitId && v.Status != VisitStatus.CheckedOut);
+                .FirstOrDefaultAsync(v => v.Id == visitId && v.Status == VisitStatus.CheckedIn);
         if (existing == null) return null;
 
         existing.CheckOutTime = checkOutTime;

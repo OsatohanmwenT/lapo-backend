@@ -21,6 +21,7 @@ public interface IVisitRepository
 
     Task<List<Visit>> GetByVisitorIdAsync(int visitorId);
     Task<List<Visit>> GetByStatusAsync(VisitStatus status);
+    Task<List<Visit>> GuestSearchAsync(string search);
 
     Task<List<ExportVisitsDto>?> GetVisitsForExportAsync(VisitExportRequest request);
 }

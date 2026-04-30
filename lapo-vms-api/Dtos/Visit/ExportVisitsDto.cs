@@ -14,7 +14,7 @@ public class ExportVisitsDto
     public string CompanyName { get; set; } = string.Empty;
     public string IdentificationType { get; set; } = string.Empty;
     public string IdentificationNumber { get; set; } = string.Empty;
-    public DateTime CheckInTime { get; set; }
+    public DateTime? CheckInTime { get; set; }
     public DateTime? CheckOutTime { get; set; }
     public DateTime RegisteredAt { get; set; }
     public string Status { get; set; } = string.Empty;
