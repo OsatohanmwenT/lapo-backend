@@ -12,6 +12,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using System.Text;
 using System.Text.Json;
+using lapo_vms_api.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -66,6 +67,7 @@ builder.Services.AddScoped<IVisitRepository, VisitRepository>();
 builder.Services.AddScoped<IVisitItemRepository, VisitItemRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IExportService, ExportService>();
+builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<AdAuthHelper>();
 
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
@@ -134,6 +136,7 @@ app.MapOpenApi();
 app.MapScalarApiReference();
 
 app.UseAuthentication();
+app.UseMiddleware<AuditMiddleware>();
 app.UseAuthorization();
 
 app.MapControllers();

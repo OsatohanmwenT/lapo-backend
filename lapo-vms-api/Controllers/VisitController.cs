@@ -12,11 +12,40 @@ namespace lapo_vms_api.Controllers
 {
     [Route("api/visits")]
     [ApiController]
-    public class VisitController(IVisitRepository visitRepository, IExportService exportService, IUserRepository userRepository) : ControllerBase
+    public class VisitController(
+        IVisitRepository visitRepository,
+        IExportService exportService,
+        IUserRepository userRepository,
+        IAuditService auditService) : ControllerBase
     {
         private readonly IVisitRepository _visitRepository = visitRepository;
         private readonly IExportService _exportService = exportService;
         private readonly IUserRepository _userRepository = userRepository;
+        private readonly IAuditService _auditService = auditService;
+
+        private int? GetActorId()
+        {
+            var actorIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            return int.TryParse(actorIdClaim, out var actorId) ? actorId : null;
+        }
+
+        private string? GetActorRole()
+        {
+            return User.FindFirstValue(ClaimTypes.Role);
+        }
+
+        private Task LogVisitAuditAsync(string eventType, Visit visit, string metadata)
+        {
+            return _auditService.LogEventAsync(new AuditLog
+            {
+                EventType = eventType,
+                ActorId = GetActorId(),
+                ActorRole = GetActorRole(),
+                VisitorId = visit.VisitorId,
+                Timestamp = DateTime.UtcNow,
+                Metadata = $"VisitId: {visit.Id}; {metadata}"
+            });
+        }
 
         /// <summary>
         /// Retrieves all visit records and applies any supplied query filters,
@@ -132,6 +161,11 @@ namespace lapo_vms_api.Controllers
 
             var createdVisit = await _visitRepository.CreateAsync(visit);
 
+            await LogVisitAuditAsync(
+                "VISIT_CREATED",
+                createdVisit,
+                $"Status: {createdVisit.Status}; HostName: {createdVisit.HostName}; HostDepartment: {createdVisit.HostDepartment}");
+
             return CreatedAtAction(
                 nameof(GetVisitById),
                 new { id = createdVisit.Id },
@@ -181,6 +215,11 @@ namespace lapo_vms_api.Controllers
             var updatedVisit = await _visitRepository.CheckOutAsync(id, DateTime.UtcNow, checkedOutBy);
             if (updatedVisit == null) return BadRequest("Only checked-in visits can be checked out.");
 
+            await LogVisitAuditAsync(
+                "VISIT_CHECKED_OUT",
+                updatedVisit,
+                $"CheckedOutBy: {checkedOutBy}; ActorType: {dto.ActorType}");
+
             return Ok(updatedVisit.ToVisitDto());
         }
 
@@ -199,6 +238,11 @@ namespace lapo_vms_api.Controllers
 
             var visit = await _visitRepository.RescheduleAsync(id, dto.RescheduleDate);
             if (visit == null) return NotFound();
+
+            await LogVisitAuditAsync(
+                "VISIT_RESCHEDULED",
+                visit,
+                $"RescheduleDate: {dto.RescheduleDate:O}");
 
             return Ok(visit.ToVisitDto());
         }
@@ -230,6 +274,11 @@ namespace lapo_vms_api.Controllers
             var updatedVisit = await _visitRepository.CheckInAsync(id, DateTime.UtcNow, checkedInBy);
             if (updatedVisit == null) return BadRequest("Only pending or rescheduled visits can be checked in.");
 
+            await LogVisitAuditAsync(
+                "VISIT_CHECKED_IN",
+                updatedVisit,
+                $"CheckedInBy: {checkedInBy}");
+
             return Ok(updatedVisit.ToVisitDto());
         }
 
@@ -253,6 +302,11 @@ namespace lapo_vms_api.Controllers
             var visit = await _visitRepository.UpdateTagNumberAsync(id, dto.TagNumber.Trim());
             if (visit == null) return NotFound();
 
+            await LogVisitAuditAsync(
+                "VISIT_TAG_UPDATED",
+                visit,
+                $"TagNumber: {visit.TagNumber}");
+
             return Ok(visit.ToVisitDto());
         }
 
@@ -272,11 +326,16 @@ namespace lapo_vms_api.Controllers
             if (visit.Status != VisitStatus.Pending)
                 return BadRequest("Only pending visits can be rejected.");
 
-            visit.Status = VisitStatus.Rejected;
+            var previousStatus = visit.Status;
+            var updatedVisit = await _visitRepository.UpdateStatusAsync(id, VisitStatus.Rejected);
+            if (updatedVisit == null) return BadRequest("Visit status could not be updated.");
 
-            await _visitRepository.UpdateStatusAsync(id, VisitStatus.Rejected);
+            await LogVisitAuditAsync(
+                "VISIT_REJECTED",
+                updatedVisit,
+                $"PreviousStatus: {previousStatus}; NewStatus: {VisitStatus.Rejected}");
 
-            return Ok(visit.ToVisitDto());
+            return Ok(updatedVisit.ToVisitDto());
         }
 
         /// <summary>
@@ -294,10 +353,16 @@ namespace lapo_vms_api.Controllers
             var visit = await _visitRepository.GetByIdAsync(id);
             if (visit == null) return NotFound();
 
-            visit.Status = status;
-            await _visitRepository.UpdateStatusAsync(id, status);
+            var previousStatus = visit.Status;
+            var updatedVisit = await _visitRepository.UpdateStatusAsync(id, status);
+            if (updatedVisit == null) return BadRequest("Visit status could not be updated.");
 
-            return Ok(visit.ToVisitDto());
+            await LogVisitAuditAsync(
+                "VISIT_STATUS_UPDATED",
+                updatedVisit,
+                $"PreviousStatus: {previousStatus}; NewStatus: {status}");
+
+            return Ok(updatedVisit.ToVisitDto());
         }
 
         [HttpGet("export")]

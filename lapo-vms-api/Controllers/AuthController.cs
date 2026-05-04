@@ -5,6 +5,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using lapo_vms_api.Data;
+using lapo_vms_api.Interface;
 using lapo_vms_api.Model;
 using lapo_vms_api.API.Helpers;
 using Microsoft.AspNetCore.Authorization;
@@ -18,12 +19,14 @@ public class AuthController : ControllerBase
     private readonly ApplicationDBContext _db;
     private readonly IConfiguration _config;
     private readonly AdAuthHelper _adAuth;
+    private readonly IAuditService _auditService;
 
-    public AuthController(ApplicationDBContext db, IConfiguration config, AdAuthHelper adAuth)
+    public AuthController(ApplicationDBContext db, IConfiguration config, AdAuthHelper adAuth, IAuditService auditService)
     {
         _db = db;
         _config = config;
         _adAuth = adAuth;
+        _auditService = auditService;
     }
 
     [HttpPost("login")]
@@ -71,6 +74,15 @@ public class AuthController : ControllerBase
         );
 
         var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
+
+        await _auditService.LogEventAsync(new AuditLog
+        {
+            EventType = "SIGN_IN",
+            ActorId = user.Id,
+            ActorRole = user.Role?.ToString(),
+            Timestamp = DateTime.UtcNow,
+            Metadata = $"Email: {user.Email}; StaffId: {user.StaffId}"
+        });
 
         return Ok(new
         {

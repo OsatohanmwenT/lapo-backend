@@ -38,6 +38,7 @@
     <Folder Include="Dtos\Visitor\" />
     <Folder Include="Dtos\WorkerDetails\" />
     <Folder Include="Mappers\" />
+    <Folder Include="Middleware\" />
     <Folder Include="Model\" />
     <Folder Include="Model\Visitor\" />
     <Folder Include="Repository\" />

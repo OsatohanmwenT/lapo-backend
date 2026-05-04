@@ -11,6 +11,7 @@ public class ApplicationDBContext(DbContextOptions<ApplicationDBContext> options
     public DbSet<VisitItem> VisitItem => Set<VisitItem>();
     public DbSet<VisitorIdentification> VisitorIdentification => Set<VisitorIdentification>();
     public DbSet<WorkerDetails> WorkerDetails => Set<WorkerDetails>();
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
