@@ -269,8 +269,8 @@ namespace lapo_vms_api.Controllers
             var visit = await _visitRepository.GetByIdAsync(id);
             if (visit == null) return NotFound();
 
-            if (visit.Status != VisitStatus.Pending)
-                return BadRequest("Only pending visits can be rejected.");
+            if (visit.Status != VisitStatus.Pending && visit.Status != VisitStatus.Rescheduled)
+                return BadRequest("Only pending or rescheduled visits can be rejected.");
 
             visit.Status = VisitStatus.Rejected;
 
