@@ -2,7 +2,7 @@ namespace lapo_vms_api.Model
 {
     public class Visitor
     {
-        public int Id { get; set; }
+        public Guid Id { get; set; } = Guid.NewGuid();
         public required string FullName { get; set; }
         public required string PhoneNumber { get; set; }
         public string? PhotoPath { get; set; } = string.Empty;

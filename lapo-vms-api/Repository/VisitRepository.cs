@@ -23,7 +23,7 @@ public class VisitRepository : IVisitRepository
         return visitModel;
     }
 
-    public async Task<Visit?> DeleteAsync(int id)
+    public async Task<Visit?> DeleteAsync(Guid id)
     {
         var visit = await _context.Visit.FindAsync(id);
         if (visit == null) return null;
@@ -62,7 +62,7 @@ public class VisitRepository : IVisitRepository
                 .ToListAsync();
     }
 
-    public async Task<Visit?> GetByIdAsync(int id)
+    public async Task<Visit?> GetByIdAsync(Guid id)
     {
         return await _context.Visit
                     .Include(v => v.Visitor)
@@ -102,7 +102,7 @@ public class VisitRepository : IVisitRepository
                  .ToListAsync();
     }
 
-    public async Task<List<Visit>> GetByVisitorIdAsync(int visitorId)
+    public async Task<List<Visit>> GetByVisitorIdAsync(Guid visitorId)
     {
         return await _context.Visit
                 .Include(v => v.Visitor)
@@ -113,7 +113,7 @@ public class VisitRepository : IVisitRepository
                 .ToListAsync();
     }
 
-    public async Task<Visit?> UpdateAsync(int id, Visit visitModel)
+    public async Task<Visit?> UpdateAsync(Guid id, Visit visitModel)
     {
         var existing = await _context.Visit.FindAsync(id);
         if (existing == null) return null;
@@ -126,7 +126,7 @@ public class VisitRepository : IVisitRepository
         return existing;
     }
 
-    public async Task<Visit?> UpdateTagNumberAsync(int visitId, string tagNumber)
+    public async Task<Visit?> UpdateTagNumberAsync(Guid visitId, string tagNumber)
     {
         var existing = await _context.Visit
                 .Include(v => v.VisitItems)
@@ -138,7 +138,7 @@ public class VisitRepository : IVisitRepository
         return existing;
     }
 
-    public async Task<Visit?> UpdateStatusAsync(int visitId, VisitStatus status)
+    public async Task<Visit?> UpdateStatusAsync(Guid visitId, VisitStatus status)
     {
         var existing = await _context.Visit
                 .Where(v => v.Id == visitId && v.Status != VisitStatus.CheckedOut)
@@ -151,7 +151,7 @@ public class VisitRepository : IVisitRepository
 
     }
 
-    public async Task<Visit?> CheckInAsync(int visitId, DateTime checkInTime, string checkedInBy)
+    public async Task<Visit?> CheckInAsync(Guid visitId, DateTime checkInTime, string checkedInBy)
     {
         var existing = await _context.Visit
                 .FirstOrDefaultAsync(v => v.Id == visitId && (v.Status == VisitStatus.Pending || v.Status == VisitStatus.Rescheduled));
@@ -165,7 +165,7 @@ public class VisitRepository : IVisitRepository
         return existing;
     }
 
-    public async Task<Visit?> CheckOutAsync(int visitId, DateTime checkOutTime, string checkedOutBy)
+    public async Task<Visit?> CheckOutAsync(Guid visitId, DateTime checkOutTime, string checkedOutBy)
     {
         var existing = await _context.Visit
                 .FirstOrDefaultAsync(v => v.Id == visitId && v.Status == VisitStatus.CheckedIn);
@@ -179,7 +179,7 @@ public class VisitRepository : IVisitRepository
         return existing;
     }
 
-    public async Task<Visit?> RescheduleAsync(int visitId, DateTime rescheduleDate)
+    public async Task<Visit?> RescheduleAsync(Guid visitId, DateTime rescheduleDate)
     {
         var existing = await _context.Visit
                 .FirstOrDefaultAsync(v => v.Id == visitId);

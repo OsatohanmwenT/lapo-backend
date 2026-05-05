@@ -9,6 +9,7 @@ public static class VisitorIdentificationMapper
     {
         return new VisitorIdentificationDto
         {
+            Id = identification.Id,
             IdentificationType = identification.IdentificationType,
             IdentificationNumber = identification.IdentificationNumber
         };

@@ -39,7 +39,7 @@ public class VisitorController(IVisitorRepository visitorRepository, IExportServ
     /// The matching visitor record when found; otherwise a not found response.
     /// </returns>
     [HttpGet("{id}")]
-    public async Task<IActionResult> GetById([FromRoute] int id)
+    public async Task<IActionResult> GetById([FromRoute] Guid id)
     {
         var visitor = await _visitorRepository.GetByIdAsync(id);
         if(visitor == null)

@@ -22,7 +22,7 @@ public class VisitItemRepository : IVisitItemRepository
         return itemModel;
     }
 
-    public async Task<VisitItem?> DeleteAsync(int id)
+    public async Task<VisitItem?> DeleteAsync(Guid id)
     {
         var item = await _context.VisitItem.FindAsync(id);
         if (item == null) return null;
@@ -37,19 +37,19 @@ public class VisitItemRepository : IVisitItemRepository
         return await _context.VisitItem.ToListAsync();
     }
 
-    public async Task<VisitItem?> GetByIdAsync(int id)
+    public async Task<VisitItem?> GetByIdAsync(Guid id)
     {
         return await _context.VisitItem.FindAsync(id);
     }
 
-    public async Task<List<VisitItem>> GetByVisitIdAsync(int visitId)
+    public async Task<List<VisitItem>> GetByVisitIdAsync(Guid visitId)
     {
         return await _context.VisitItem
                 .Where(vi => vi.VisitId == visitId)
                 .ToListAsync();
     }
 
-    public async Task<VisitItem?> UpdateAsync(int id, VisitItem itemModel)
+    public async Task<VisitItem?> UpdateAsync(Guid id, VisitItem itemModel)
     {
         var existing = await _context.VisitItem.FindAsync(id);
         if (existing == null) return null;

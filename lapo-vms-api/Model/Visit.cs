@@ -2,9 +2,9 @@ namespace lapo_vms_api.Model
 {
     public class Visit
     {
-    public int Id { get; set; }
+    public Guid Id { get; set; } = Guid.NewGuid();
     public Visitor Visitor { get; set; } = null!;
-    public int VisitorId { get; set; }
+    public Guid VisitorId { get; set; }
     public string PurposeOfVisit { get; set; } = string.Empty;
 
     public string? TagNumber { get; set; }

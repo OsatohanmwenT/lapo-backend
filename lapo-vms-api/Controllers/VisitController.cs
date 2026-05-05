@@ -23,10 +23,10 @@ namespace lapo_vms_api.Controllers
         private readonly IUserRepository _userRepository = userRepository;
         private readonly IAuditService _auditService = auditService;
 
-        private int? GetActorId()
+        private Guid? GetActorId()
         {
             var actorIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            return int.TryParse(actorIdClaim, out var actorId) ? actorId : null;
+            return Guid.TryParse(actorIdClaim, out var actorId) ? actorId : null;
         }
 
         private string? GetActorRole()
@@ -83,7 +83,7 @@ namespace lapo_vms_api.Controllers
         /// The matching visit record when found; otherwise a not found response.
         /// </returns>
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetVisitById(int id)
+        public async Task<IActionResult> GetVisitById(Guid id)
         {
             var visit = await _visitRepository.GetByIdAsync(id);
             if (visit == null) return NotFound();
@@ -182,7 +182,7 @@ namespace lapo_vms_api.Controllers
         /// </returns>
         [HttpPatch("{id}/checkout")]
         [AllowAnonymous]
-        public async Task<IActionResult> CheckOutVisit(int id, [FromBody] CheckOutVisitDto dto)
+        public async Task<IActionResult> CheckOutVisit(Guid id, [FromBody] CheckOutVisitDto dto)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
@@ -232,7 +232,7 @@ namespace lapo_vms_api.Controllers
         /// The updated visit record when the visit exists; otherwise a not found response.
         /// </returns>
         [HttpPatch("{id}/reschedule")]
-        public async Task<IActionResult> RescheduleVisit(int id, [FromBody] RescheduleVisitDto dto)
+        public async Task<IActionResult> RescheduleVisit(Guid id, [FromBody] RescheduleVisitDto dto)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
@@ -256,7 +256,7 @@ namespace lapo_vms_api.Controllers
         /// The updated visit record when check-in is successful; otherwise a bad request or not found response.
         /// </returns>
         [HttpPatch("{id}/check-in")]
-        public async Task<IActionResult> CheckInVisit(int id)
+        public async Task<IActionResult> CheckInVisit(Guid id)
         {
             var visit = await _visitRepository.GetByIdAsync(id);
             if (visit == null) return NotFound("Visit not found.");
@@ -292,7 +292,7 @@ namespace lapo_vms_api.Controllers
         /// otherwise a bad request or not found response.
         /// </returns>
         [HttpPatch("{id}/tag-number")]
-        public async Task<IActionResult> UpdateVisitTagNumber(int id, [FromBody] UpdateVisitTagNumberDto dto)
+        public async Task<IActionResult> UpdateVisitTagNumber(Guid id, [FromBody] UpdateVisitTagNumberDto dto)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
@@ -318,7 +318,7 @@ namespace lapo_vms_api.Controllers
         /// The updated visit record when reject is successful; otherwise a bad request or not found response.
         /// </returns>
         [HttpPatch("{id}/reject")]
-        public async Task<IActionResult> RejectVisit(int id)
+        public async Task<IActionResult> RejectVisit(Guid id)
         {
             var visit = await _visitRepository.GetByIdAsync(id);
             if (visit == null) return NotFound();
@@ -348,7 +348,7 @@ namespace lapo_vms_api.Controllers
         /// The updated visit record when the visit exists; otherwise a not found response.
         /// </returns>
         [HttpPatch("{id}/status")]
-        public async Task<IActionResult> UpdateVisitStatus(int id, [FromBody] VisitStatus status)
+        public async Task<IActionResult> UpdateVisitStatus(Guid id, [FromBody] VisitStatus status)
         {
             var visit = await _visitRepository.GetByIdAsync(id);
             if (visit == null) return NotFound();

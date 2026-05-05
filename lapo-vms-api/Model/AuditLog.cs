@@ -6,9 +6,9 @@ public class AuditLog
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public string EventType { get; set; } = string.Empty;
-    public int? ActorId { get; set; }
+    public Guid? ActorId { get; set; }
     public string? ActorRole { get; set; }
-    public int? VisitorId { get; set; }
+    public Guid? VisitorId { get; set; }
     public DateTime Timestamp { get; set; } = DateTime.UtcNow;
     public string? Metadata { get; set; }
 

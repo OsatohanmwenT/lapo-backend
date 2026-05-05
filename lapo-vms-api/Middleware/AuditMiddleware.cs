@@ -32,10 +32,10 @@ public class AuditMiddleware
         if (eventType == null)
             return;
 
-        int? actorId = null;
+        Guid? actorId = null;
         var actorIdClaim = context.User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-        if (int.TryParse(actorIdClaim, out var parsedActorId))
+        if (Guid.TryParse(actorIdClaim, out var parsedActorId))
             actorId = parsedActorId;
 
         var log = new AuditLog

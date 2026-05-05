@@ -5,8 +5,8 @@ namespace lapo_vms_api.Dtos.Visit;
 
 public class VisitDto
 {
-    public int Id { get; set; }
-    public int VisitorId { get; set; }
+    public Guid Id { get; set; }
+    public Guid VisitorId { get; set; }
     public VisitVisitorDto? Visitor { get; set; }
     public string PurposeOfVisit { get; set; } = string.Empty;
     public string? TagNumber { get; set; }

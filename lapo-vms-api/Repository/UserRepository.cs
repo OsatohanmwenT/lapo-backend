@@ -29,7 +29,7 @@ public class UserRepository(ApplicationDBContext context) : IUserRepository
             .ToListAsync();
     }
 
-    public async Task<User?> GetByIdAsync(int id)
+    public async Task<User?> GetByIdAsync(Guid id)
     {
         return await _context.User.FirstOrDefaultAsync(u => u.Id == id);
     }
@@ -48,7 +48,7 @@ public class UserRepository(ApplicationDBContext context) : IUserRepository
         return userModel;
     }
 
-    public async Task<User?> UpdateAsync(int id, User userModel)
+    public async Task<User?> UpdateAsync(Guid id, User userModel)
     {
         var existing = await _context.User.FindAsync(id);
         if (existing == null) return null;
@@ -62,7 +62,7 @@ public class UserRepository(ApplicationDBContext context) : IUserRepository
         return existing;
     }
 
-    public async Task<User?> DeleteAsync(int id)
+    public async Task<User?> DeleteAsync(Guid id)
     {
         var user = await _context.User.FindAsync(id);
         if (user == null) return null;
@@ -72,14 +72,14 @@ public class UserRepository(ApplicationDBContext context) : IUserRepository
         return user;
     }
 
-    public async Task<bool> ExistsByEmailAsync(string email, int? excludeId = null)
+    public async Task<bool> ExistsByEmailAsync(string email, Guid? excludeId = null)
     {
         return await _context.User.AnyAsync(u =>
             u.Email == email &&
             (!excludeId.HasValue || u.Id != excludeId.Value));
     }
 
-    public async Task<bool> ExistsByStaffIdAsync(string staffId, int? excludeId = null)
+    public async Task<bool> ExistsByStaffIdAsync(string staffId, Guid? excludeId = null)
     {
         return await _context.User.AnyAsync(u =>
             u.StaffId == staffId &&

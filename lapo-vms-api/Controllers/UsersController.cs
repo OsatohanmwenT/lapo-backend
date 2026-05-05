@@ -8,9 +8,10 @@ namespace lapo_vms_api.Controllers;
 
 [Route("api/users")]
 [ApiController]
-public class UsersController(IUserRepository userRepository) : ControllerBase
+public class UsersController(IUserRepository userRepository, IAuditService auditService) : ControllerBase
 {
     private readonly IUserRepository _userRepository = userRepository;
+    private readonly IAuditService _auditService = auditService;
 
     [HttpGet]
     public async Task<IActionResult> GetAllUsers([FromQuery] QueryParameters queryParameters)
@@ -20,10 +21,10 @@ public class UsersController(IUserRepository userRepository) : ControllerBase
     }
 
     [HttpGet("{id}")]
-    public async Task<IActionResult> GetById([FromRoute] int id)
+    public async Task<IActionResult> GetById([FromRoute] Guid id)
     {
         var user = await _userRepository.GetByIdAsync(id);
-        if (user == null) 
+        if (user == null)
             return Problem(detail: $"User with ID {id} was not found.", statusCode: StatusCodes.Status404NotFound, title: "User Not Found");
 
         return Ok(ToUserDto(user));
@@ -52,12 +53,20 @@ public class UsersController(IUserRepository userRepository) : ControllerBase
         };
 
         var createdUser = await _userRepository.CreateAsync(user);
+        await _auditService.LogEventAsync(new AuditLog
+        {
+            EventType = "USER_CREATED",
+            ActorId = createdUser.Id,
+            ActorRole = createdUser.Role?.ToString(),
+            Timestamp = DateTime.UtcNow,
+            Metadata = $"Email: {createdUser.Email}; StaffId: {createdUser.StaffId}"
+        });
 
         return Ok(ToUserDto(createdUser));
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateUser([FromRoute] int id, [FromBody] UpdateUserDto dto)
+    public async Task<IActionResult> UpdateUser([FromRoute] Guid id, [FromBody] UpdateUserDto dto)
     {
         if (!ModelState.IsValid) return ValidationProblem(ModelState);
 
@@ -79,17 +88,17 @@ public class UsersController(IUserRepository userRepository) : ControllerBase
         };
 
         var updatedUser = await _userRepository.UpdateAsync(id, user);
-        if (updatedUser == null) 
+        if (updatedUser == null)
             return Problem(detail: $"User with ID {id} was not found.", statusCode: StatusCodes.Status404NotFound, title: "User Not Found");
 
         return Ok(ToUserDto(updatedUser));
     }
 
     [HttpDelete("{id}")]
-    public async Task<IActionResult> DeleteUser([FromRoute] int id)
+    public async Task<IActionResult> DeleteUser([FromRoute] Guid id)
     {
         var deletedUser = await _userRepository.DeleteAsync(id);
-        if (deletedUser == null) 
+        if (deletedUser == null)
             return Problem(detail: $"User with ID {id} was not found.", statusCode: StatusCodes.Status404NotFound, title: "User Not Found");
 
         return Ok(ToUserDto(deletedUser));

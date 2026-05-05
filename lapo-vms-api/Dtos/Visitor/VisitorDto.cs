@@ -7,7 +7,7 @@ namespace lapo_vms_api.Dtos.Visitor;
 
 public class VisitorDto
 {
-    public int Id { get; set; }
+    public Guid Id { get; set; }
     public string FullName { get; set; } = string.Empty;
     public string PhoneNumber { get; set; } = string.Empty;
     public string PhotoPath { get; set; } = string.Empty;

@@ -9,8 +9,10 @@ public static class VisitItemMapper
     {
         return new VisitItemDto
         {
+            Id = item.Id,
             SerialNumber = item.SerialNumber,
             LaptopModel = item.LaptopModel,
+            VisitId = item.VisitId
         };
     }
 

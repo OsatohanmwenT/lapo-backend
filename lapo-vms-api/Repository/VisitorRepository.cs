@@ -21,7 +21,7 @@ public class VisitorRepository(ApplicationDBContext context) : IVisitorRepositor
         return visitorModel;
     }
 
-    public async Task<Visitor?> DeleteAsync(int id)
+    public async Task<Visitor?> DeleteAsync(Guid id)
     {
         var visitor = await _context.Visitor.FindAsync(id);
         if (visitor == null) return null;
@@ -61,7 +61,7 @@ public class VisitorRepository(ApplicationDBContext context) : IVisitorRepositor
             .ToListAsync();
     }
 
-    public async Task<Visitor?> GetByIdAsync(int id)
+    public async Task<Visitor?> GetByIdAsync(Guid id)
     {
         return await _context.Visitor
         .Include(v => v.Visits)
@@ -69,7 +69,7 @@ public class VisitorRepository(ApplicationDBContext context) : IVisitorRepositor
         .Include(v => v.WorkerDetails).FirstOrDefaultAsync(v => v.Id == id);
     }
 
-    public async Task<Visitor?> UpdateAsync(int id, Visitor visitorModel)
+    public async Task<Visitor?> UpdateAsync(Guid id, Visitor visitorModel)
     {
         var existing = await _context.Visitor.FindAsync(id);
         if (existing == null) return null;
