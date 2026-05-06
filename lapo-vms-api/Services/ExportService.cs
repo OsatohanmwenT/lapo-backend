@@ -14,9 +14,8 @@ public class ExportService : IExportService
     {
         using var memoryStream = new MemoryStream();
         using var streamWriter = new StreamWriter(memoryStream, Encoding.UTF8);
-        var config = new CsvConfiguration
+        var config = new CsvConfiguration(CultureInfo.InvariantCulture)
         {
-            CultureInfo = CultureInfo.InvariantCulture,
             HasHeaderRecord = true
         };
 

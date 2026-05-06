@@ -16,12 +16,14 @@ namespace lapo_vms_api.Controllers
         IVisitRepository visitRepository,
         IExportService exportService,
         IUserRepository userRepository,
-        IAuditService auditService) : ControllerBase
+        IAuditService auditService,
+        ILogger<VisitController> logger) : ControllerBase
     {
         private readonly IVisitRepository _visitRepository = visitRepository;
         private readonly IExportService _exportService = exportService;
         private readonly IUserRepository _userRepository = userRepository;
         private readonly IAuditService _auditService = auditService;
+        private readonly ILogger<VisitController> _logger = logger;
 
         private Guid? GetActorId()
         {
@@ -110,7 +112,7 @@ namespace lapo_vms_api.Controllers
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
             var photoPath = await ImageUploader.UploadImage(dto.Visitor.Photo);
-            Console.WriteLine($"Photo Path: {photoPath}");
+            _logger.LogTrace("Visitor photo uploaded. PhotoPath={PhotoPath}", photoPath);
 
             var visitor = new Visitor
             {

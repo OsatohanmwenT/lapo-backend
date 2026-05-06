@@ -13,8 +13,30 @@ using Microsoft.OpenApi;
 using System.Text;
 using System.Text.Json;
 using lapo_vms_api.Middleware;
+using Serilog;
+using Serilog.Events;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Host.UseSerilog((context, services, config) =>
+{
+    var isDevelopment = context.HostingEnvironment.IsDevelopment();
+
+    config
+        .MinimumLevel.Is(isDevelopment ? LogEventLevel.Verbose : LogEventLevel.Information)
+        .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+        .MinimumLevel.Override("Microsoft.EntityFrameworkCore", LogEventLevel.Error)
+        .Enrich.FromLogContext()
+        .WriteTo.Console(
+            outputTemplate:
+            "[{Timestamp:HH:mm:ss} {Level:u3}] {SourceContext} TraceId={TraceId} Method={Method} Path={Path} Status={StatusCode} Source={ErrorSource} {Message:lj}{NewLine}{Exception}")
+        .WriteTo.File(
+            path: "logs/app-.log",
+            rollingInterval: RollingInterval.Day,
+            retainedFileCountLimit: 14,
+            outputTemplate:
+            "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} {Level:u3}] {SourceContext} TraceId={TraceId} Method={Method} Path={Path} Status={StatusCode} Source={ErrorSource} {Message:lj}{NewLine}{Exception}");
+});
 
 builder.Services.AddSqlServer<ApplicationDBContext>(builder.Configuration.GetConnectionString("DefaultConnection"));
 builder.Services.AddControllers(options =>
@@ -135,6 +157,7 @@ app.UseSwaggerUI();
 app.MapOpenApi();
 app.MapScalarApiReference();
 
+app.UseMiddleware<TraceLoggingMiddleware>();
 app.UseAuthentication();
 app.UseMiddleware<AuditMiddleware>();
 app.UseAuthorization();
