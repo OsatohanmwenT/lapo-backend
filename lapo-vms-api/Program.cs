@@ -16,6 +16,33 @@ using lapo_vms_api.Middleware;
 using Serilog;
 using Serilog.Events;
 
+var envPath = Path.Combine(Directory.GetCurrentDirectory(), ".env");
+if (File.Exists(envPath))
+{
+    foreach (var line in File.ReadAllLines(envPath))
+    {
+        var trimmedLine = line.Trim();
+        if (string.IsNullOrWhiteSpace(trimmedLine) || trimmedLine.StartsWith("#"))
+        {
+            continue;
+        }
+
+        var separatorIndex = trimmedLine.IndexOf('=');
+        if (separatorIndex <= 0)
+        {
+            continue;
+        }
+
+        var key = trimmedLine[..separatorIndex].Trim();
+        var value = trimmedLine[(separatorIndex + 1)..].Trim().Trim('"');
+
+        if (Environment.GetEnvironmentVariable(key) == null)
+        {
+            Environment.SetEnvironmentVariable(key, value);
+        }
+    }
+}
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Host.UseSerilog((context, services, config) =>
@@ -134,13 +161,16 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
+var frontendOrigins = builder.Configuration["FrontendOrigins"]?
+    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+    ?? ["http://localhost:5173", "https://localhost:5173"];
 
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend",
         policy =>
         {
-            policy.WithOrigins("http://localhost:5173", "https://localhost:5173")
+            policy.WithOrigins(frontendOrigins)
                   .AllowAnyHeader()
                   .AllowAnyMethod();
         });
