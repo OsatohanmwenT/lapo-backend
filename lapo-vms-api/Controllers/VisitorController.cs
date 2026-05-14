@@ -3,6 +3,7 @@ using lapo_vms_api.Dtos;
 using lapo_vms_api.Helpers;
 using lapo_vms_api.Interface;
 using lapo_vms_api.Mappers;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace lapo_vms_api.Controllers;
@@ -42,10 +43,34 @@ public class VisitorController(IVisitorRepository visitorRepository, IExportServ
     public async Task<IActionResult> GetById([FromRoute] Guid id)
     {
         var visitor = await _visitorRepository.GetByIdAsync(id);
-        if(visitor == null)
+        if (visitor == null)
         {
             return NotFound();
         }
+        return Ok(visitor.ToVisitorDto());
+    }
+
+    /// <summary>
+    /// Retrieves an existing visitor by exact phone number for returning visitor auto-fill.
+    /// </summary>
+    /// <param name="phoneNumber">The visitor phone number to match exactly after removing formatting.</param>
+    /// <returns>
+    /// The matching visitor record when found; otherwise a bad request or not found response.
+    /// </returns>
+    [HttpGet("phone")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetByPhoneNumber([FromQuery] string phoneNumber)
+    {
+        if (string.IsNullOrWhiteSpace(phoneNumber))
+            return BadRequest("Phone number is required.");
+
+        var normalizedPhoneNumber = new string(phoneNumber.Where(char.IsDigit).ToArray());
+        if (string.IsNullOrWhiteSpace(normalizedPhoneNumber))
+            return BadRequest("Phone number must contain digits.");
+
+        var visitor = await _visitorRepository.GetByPhoneNumberAsync(normalizedPhoneNumber);
+        if (visitor == null) return NotFound();
+
         return Ok(visitor.ToVisitorDto());
     }
 

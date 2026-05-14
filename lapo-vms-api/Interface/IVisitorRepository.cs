@@ -9,6 +9,7 @@ public interface IVisitorRepository
 {
     Task<List<Visitor>> GetAllAsync(QueryParameters queryParameters);
     Task<Visitor?> GetByIdAsync(Guid id);
+    Task<Visitor?> GetByPhoneNumberAsync(string phoneNumber);
     Task<Visitor> CreateAsync(Visitor visitorModel);
     Task<Visitor?> UpdateAsync(Guid id, Visitor visitorModel);
     Task<Visitor?> DeleteAsync(Guid id);

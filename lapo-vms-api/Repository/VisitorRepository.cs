@@ -69,6 +69,22 @@ public class VisitorRepository(ApplicationDBContext context) : IVisitorRepositor
         .Include(v => v.WorkerDetails).FirstOrDefaultAsync(v => v.Id == id);
     }
 
+    public async Task<Visitor?> GetByPhoneNumberAsync(string phoneNumber)
+    {
+        return await _context.Visitor
+            .Include(v => v.Visits)
+            .Include(v => v.Identification)
+            .Include(v => v.WorkerDetails)
+            .Where(v => v.PhoneNumber
+                .Replace(" ", "")
+                .Replace("+", "")
+                .Replace("-", "")
+                .Replace("(", "")
+                .Replace(")", "") == phoneNumber)
+            .OrderByDescending(v => v.CreatedAt)
+            .FirstOrDefaultAsync();
+    }
+
     public async Task<Visitor?> UpdateAsync(Guid id, Visitor visitorModel)
     {
         var existing = await _context.Visitor.FindAsync(id);
