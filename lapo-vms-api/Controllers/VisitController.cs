@@ -36,6 +36,11 @@ namespace lapo_vms_api.Controllers
             return User.FindFirstValue(ClaimTypes.Role);
         }
 
+        private string? GetActorStaffId()
+        {
+            return User.FindFirstValue("staffId");
+        }
+
         private Task LogVisitAuditAsync(string eventType, Visit visit, string metadata)
         {
             return _auditService.LogEventAsync(new AuditLog
@@ -44,9 +49,21 @@ namespace lapo_vms_api.Controllers
                 ActorId = GetActorId(),
                 ActorRole = GetActorRole(),
                 VisitorId = visit.VisitorId,
-                Timestamp = DateTime.UtcNow,
+                Timestamp = WatClock.Now,
                 Metadata = $"VisitId: {visit.Id}; {metadata}"
             });
+        }
+
+        private void LogVisitFailure(string operation, string reason, Guid? visitId = null)
+        {
+            _logger.LogWarning(
+                "Visit operation failed. Operation={Operation} Reason={Reason} VisitId={VisitId} ActorId={ActorId} StaffId={StaffId} Role={Role}",
+                operation,
+                reason,
+                visitId,
+                GetActorId(),
+                GetActorStaffId(),
+                GetActorRole());
         }
 
         /// <summary>
@@ -111,8 +128,18 @@ namespace lapo_vms_api.Controllers
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
+            var normalizedPhone = dto.Visitor.PhoneNumber
+                .Replace(" ", "").Replace("+", "").Replace("-", "")
+                .Replace("(", "").Replace(")", "");
+
+            var hasActiveVisit = await _visitRepository.HasActiveVisitByPhoneAsync(normalizedPhone);
+            if (hasActiveVisit)
+            {
+                LogVisitFailure("Create", "ActiveVisitExists");
+                return Conflict(new { message = "This visitor already has an active or pending visit. Please wait for it to be completed before registering again." });
+            }
+
             var photoPath = await ImageUploader.UploadImage(dto.Visitor.Photo);
-            _logger.LogTrace("Visitor photo uploaded. PhotoPath={PhotoPath}", photoPath);
 
             var visitor = new Visitor
             {
@@ -168,6 +195,15 @@ namespace lapo_vms_api.Controllers
                 createdVisit,
                 $"Status: {createdVisit.Status}; HostName: {createdVisit.HostName}; HostDepartment: {createdVisit.HostDepartment}");
 
+            _logger.LogInformation(
+                "Visit created. VisitId={VisitId} VisitorId={VisitorId} Status={Status} ActorId={ActorId} StaffId={StaffId} Role={Role}",
+                createdVisit.Id,
+                createdVisit.VisitorId,
+                createdVisit.Status,
+                GetActorId(),
+                GetActorStaffId(),
+                GetActorRole());
+
             return CreatedAtAction(
                 nameof(GetVisitById),
                 new { id = createdVisit.Id },
@@ -189,10 +225,17 @@ namespace lapo_vms_api.Controllers
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
             var visit = await _visitRepository.GetByIdAsync(id);
-            if (visit == null) return NotFound(new { message = "Visit not found." });
+            if (visit == null)
+            {
+                LogVisitFailure("CheckOut", "VisitNotFound", id);
+                return NotFound(new { message = "Visit not found." });
+            }
 
             if (visit.Status != VisitStatus.CheckedIn)
+            {
+                LogVisitFailure("CheckOut", "InvalidVisitStatus", id);
                 return BadRequest(new { message = "Only checked-in visits can be checked out." });
+            }
 
             if (string.IsNullOrWhiteSpace(dto.Value))
                 return BadRequest(new { message = "Checkout actor value is required." });
@@ -205,7 +248,11 @@ namespace lapo_vms_api.Controllers
                     return Unauthorized(new { message = "Authentication required for staff checkout." });
 
                 var user = await _userRepository.GetByStaffIdAsync(dto.Value.Trim());
-                if (user == null) return NotFound(new { message = "User not found." });
+                if (user == null)
+                {
+                    LogVisitFailure("CheckOut", "StaffUserNotFound", id);
+                    return NotFound(new { message = "User not found." });
+                }
 
                 checkedOutBy = user.Name ?? string.Empty;
             }
@@ -214,13 +261,26 @@ namespace lapo_vms_api.Controllers
                 checkedOutBy = dto.Value.Trim();
             }
 
-            var updatedVisit = await _visitRepository.CheckOutAsync(id, DateTime.UtcNow, checkedOutBy);
-            if (updatedVisit == null) return BadRequest("Only checked-in visits can be checked out.");
+            var updatedVisit = await _visitRepository.CheckOutAsync(id, WatClock.Now, checkedOutBy);
+            if (updatedVisit == null)
+            {
+                LogVisitFailure("CheckOut", "StatusChangedBeforeUpdate", id);
+                return BadRequest("Only checked-in visits can be checked out.");
+            }
 
             await LogVisitAuditAsync(
                 "VISIT_CHECKED_OUT",
                 updatedVisit,
                 $"CheckedOutBy: {checkedOutBy}; ActorType: {dto.ActorType}");
+
+            _logger.LogInformation(
+                "Visit checked out. VisitId={VisitId} VisitorId={VisitorId} ActorType={ActorType} ActorId={ActorId} StaffId={StaffId} Role={Role}",
+                updatedVisit.Id,
+                updatedVisit.VisitorId,
+                dto.ActorType,
+                GetActorId(),
+                GetActorStaffId(),
+                GetActorRole());
 
             return Ok(updatedVisit.ToVisitDto());
         }
@@ -239,12 +299,24 @@ namespace lapo_vms_api.Controllers
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
             var visit = await _visitRepository.RescheduleAsync(id, dto.RescheduleDate);
-            if (visit == null) return NotFound();
+            if (visit == null)
+            {
+                LogVisitFailure("Reschedule", "VisitNotFound", id);
+                return NotFound();
+            }
 
             await LogVisitAuditAsync(
                 "VISIT_RESCHEDULED",
                 visit,
                 $"RescheduleDate: {dto.RescheduleDate:O}");
+
+            _logger.LogInformation(
+                "Visit rescheduled. VisitId={VisitId} VisitorId={VisitorId} ActorId={ActorId} StaffId={StaffId} Role={Role}",
+                visit.Id,
+                visit.VisitorId,
+                GetActorId(),
+                GetActorStaffId(),
+                GetActorRole());
 
             return Ok(visit.ToVisitDto());
         }
@@ -261,25 +333,47 @@ namespace lapo_vms_api.Controllers
         public async Task<IActionResult> CheckInVisit(Guid id)
         {
             var visit = await _visitRepository.GetByIdAsync(id);
-            if (visit == null) return NotFound("Visit not found.");
+            if (visit == null)
+            {
+                LogVisitFailure("CheckIn", "VisitNotFound", id);
+                return NotFound("Visit not found.");
+            }
 
             if (visit.Status != VisitStatus.Pending && visit.Status != VisitStatus.Rescheduled)
+            {
+                LogVisitFailure("CheckIn", "InvalidVisitStatus", id);
                 return BadRequest("Only pending or rescheduled visits can be checked in.");
+            }
 
             var checkedInBy = User.FindFirstValue(ClaimTypes.NameIdentifier)
                 ?? User.FindFirstValue("staffId")
                 ?? User.FindFirstValue(ClaimTypes.Name);
 
             if (string.IsNullOrWhiteSpace(checkedInBy))
+            {
+                LogVisitFailure("CheckIn", "ActorIdentityMissing", id);
                 return Unauthorized("User identity could not be resolved.");
+            }
 
-            var updatedVisit = await _visitRepository.CheckInAsync(id, DateTime.UtcNow, checkedInBy);
-            if (updatedVisit == null) return BadRequest("Only pending or rescheduled visits can be checked in.");
+            var updatedVisit = await _visitRepository.CheckInAsync(id, WatClock.Now, checkedInBy);
+            if (updatedVisit == null)
+            {
+                LogVisitFailure("CheckIn", "StatusChangedBeforeUpdate", id);
+                return BadRequest("Only pending or rescheduled visits can be checked in.");
+            }
 
             await LogVisitAuditAsync(
                 "VISIT_CHECKED_IN",
                 updatedVisit,
                 $"CheckedInBy: {checkedInBy}");
+
+            _logger.LogInformation(
+                "Visit checked in. VisitId={VisitId} VisitorId={VisitorId} ActorId={ActorId} StaffId={StaffId} Role={Role}",
+                updatedVisit.Id,
+                updatedVisit.VisitorId,
+                GetActorId(),
+                GetActorStaffId(),
+                GetActorRole());
 
             return Ok(updatedVisit.ToVisitDto());
         }
@@ -301,13 +395,32 @@ namespace lapo_vms_api.Controllers
             if (string.IsNullOrWhiteSpace(dto.TagNumber))
                 return BadRequest("Tag number cannot be empty.");
 
+            var tagInUse = await _visitRepository.IsTagNumberInUseAsync(dto.TagNumber.Trim(), id);
+            if (tagInUse)
+            {
+                LogVisitFailure("UpdateTag", "TagAlreadyInUse", id);
+                return Conflict(new { message = $"Tag number '{dto.TagNumber.Trim()}' is already assigned to another checked-in visitor." });
+            }
+
             var visit = await _visitRepository.UpdateTagNumberAsync(id, dto.TagNumber.Trim());
-            if (visit == null) return NotFound();
+            if (visit == null)
+            {
+                LogVisitFailure("UpdateTag", "VisitNotFound", id);
+                return NotFound();
+            }
 
             await LogVisitAuditAsync(
                 "VISIT_TAG_UPDATED",
                 visit,
                 $"TagNumber: {visit.TagNumber}");
+
+            _logger.LogInformation(
+                "Visit tag updated. VisitId={VisitId} VisitorId={VisitorId} ActorId={ActorId} StaffId={StaffId} Role={Role}",
+                visit.Id,
+                visit.VisitorId,
+                GetActorId(),
+                GetActorStaffId(),
+                GetActorRole());
 
             return Ok(visit.ToVisitDto());
         }
@@ -323,19 +436,39 @@ namespace lapo_vms_api.Controllers
         public async Task<IActionResult> RejectVisit(Guid id)
         {
             var visit = await _visitRepository.GetByIdAsync(id);
-            if (visit == null) return NotFound();
+            if (visit == null)
+            {
+                LogVisitFailure("Reject", "VisitNotFound", id);
+                return NotFound();
+            }
 
             if (visit.Status != VisitStatus.Pending && visit.Status != VisitStatus.Rescheduled)
+            {
+                LogVisitFailure("Reject", "InvalidVisitStatus", id);
                 return BadRequest("Only pending or rescheduled visits can be rejected.");
+            }
 
             var previousStatus = visit.Status;
             var updatedVisit = await _visitRepository.UpdateStatusAsync(id, VisitStatus.Rejected);
-            if (updatedVisit == null) return BadRequest("Visit status could not be updated.");
+            if (updatedVisit == null)
+            {
+                LogVisitFailure("Reject", "UpdateFailed", id);
+                return BadRequest("Visit status could not be updated.");
+            }
 
             await LogVisitAuditAsync(
                 "VISIT_REJECTED",
                 updatedVisit,
                 $"PreviousStatus: {previousStatus}; NewStatus: {VisitStatus.Rejected}");
+
+            _logger.LogInformation(
+                "Visit rejected. VisitId={VisitId} VisitorId={VisitorId} PreviousStatus={PreviousStatus} ActorId={ActorId} StaffId={StaffId} Role={Role}",
+                updatedVisit.Id,
+                updatedVisit.VisitorId,
+                previousStatus,
+                GetActorId(),
+                GetActorStaffId(),
+                GetActorRole());
 
             return Ok(updatedVisit.ToVisitDto());
         }
@@ -353,16 +486,34 @@ namespace lapo_vms_api.Controllers
         public async Task<IActionResult> UpdateVisitStatus(Guid id, [FromBody] VisitStatus status)
         {
             var visit = await _visitRepository.GetByIdAsync(id);
-            if (visit == null) return NotFound();
+            if (visit == null)
+            {
+                LogVisitFailure("UpdateStatus", "VisitNotFound", id);
+                return NotFound();
+            }
 
             var previousStatus = visit.Status;
             var updatedVisit = await _visitRepository.UpdateStatusAsync(id, status);
-            if (updatedVisit == null) return BadRequest("Visit status could not be updated.");
+            if (updatedVisit == null)
+            {
+                LogVisitFailure("UpdateStatus", "UpdateFailed", id);
+                return BadRequest("Visit status could not be updated.");
+            }
 
             await LogVisitAuditAsync(
                 "VISIT_STATUS_UPDATED",
                 updatedVisit,
                 $"PreviousStatus: {previousStatus}; NewStatus: {status}");
+
+            _logger.LogInformation(
+                "Visit status updated. VisitId={VisitId} VisitorId={VisitorId} PreviousStatus={PreviousStatus} NewStatus={NewStatus} ActorId={ActorId} StaffId={StaffId} Role={Role}",
+                updatedVisit.Id,
+                updatedVisit.VisitorId,
+                previousStatus,
+                status,
+                GetActorId(),
+                GetActorStaffId(),
+                GetActorRole());
 
             return Ok(updatedVisit.ToVisitDto());
         }
@@ -372,7 +523,10 @@ namespace lapo_vms_api.Controllers
         {
             var visitsForExport = await _visitRepository.GetVisitsForExportAsync(request);
             if (visitsForExport == null || !visitsForExport.Any())
+            {
+                LogVisitFailure("Export", "NoRecordsFound");
                 return NotFound("No visits found for the specified export criteria.");
+            }
 
 
             byte[] fileContent;
@@ -384,6 +538,14 @@ namespace lapo_vms_api.Controllers
                 fileContent = _exportService.ExportToCsv(visitsForExport);
                 fileName = $"Visit_Export_{DateTime.UtcNow:yyyyMMddHHmmss}.csv";
 
+                _logger.LogInformation(
+                    "Visits exported. Format={Format} RecordCount={RecordCount} ActorId={ActorId} StaffId={StaffId} Role={Role}",
+                    request.Format,
+                    visitsForExport.Count,
+                    GetActorId(),
+                    GetActorStaffId(),
+                    GetActorRole());
+
                 return File(fileContent, "text/csv", fileName);
             }
 
@@ -392,6 +554,14 @@ namespace lapo_vms_api.Controllers
                 fileContent = _exportService.ExportToExcel(visitsForExport, "Visits");
                 fileName = $"Visit_Export_{DateTime.UtcNow:yyyyMMddHHmmss}.xlsx";
 
+                _logger.LogInformation(
+                    "Visits exported. Format={Format} RecordCount={RecordCount} ActorId={ActorId} StaffId={StaffId} Role={Role}",
+                    request.Format,
+                    visitsForExport.Count,
+                    GetActorId(),
+                    GetActorStaffId(),
+                    GetActorRole());
+
                 return File(
                     fileContent,
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -399,6 +569,7 @@ namespace lapo_vms_api.Controllers
                 );
             }
 
+            LogVisitFailure("Export", "InvalidFormat");
             return BadRequest("Invalid export format.");
 
         }

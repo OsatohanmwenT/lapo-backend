@@ -24,4 +24,7 @@ public interface IVisitRepository
     Task<List<Visit>> GuestSearchAsync(string search);
 
     Task<List<ExportVisitsDto>?> GetVisitsForExportAsync(VisitExportRequest request);
+
+    Task<bool> HasActiveVisitByPhoneAsync(string normalizedPhone);
+    Task<bool> IsTagNumberInUseAsync(string tagNumber, Guid excludeVisitId);
 }

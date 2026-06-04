@@ -1,9 +1,9 @@
 namespace lapo_vms_api.Helpers;
 
-public class QueryParameters
+public class AuditQueryParameters
 {
     private const int MaxPageSize = 100;
-    private int _pageSize = 10;
+    private int _pageSize = 20;
     private int _pageNumber = 1;
 
     public int PageNumber
@@ -17,18 +17,12 @@ public class QueryParameters
         get => _pageSize;
         set
         {
-            if (value < 1)
-            {
-                _pageSize = 10;
-                return;
-            }
-
+            if (value < 1) { _pageSize = 20; return; }
             _pageSize = value > MaxPageSize ? MaxPageSize : value;
         }
     }
 
-    public string? Search { get; set; }
-    public string? Status { get; set; }
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
+    public string? EventType { get; set; }
 }

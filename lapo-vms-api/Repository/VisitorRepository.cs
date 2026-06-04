@@ -14,7 +14,7 @@ public class VisitorRepository(ApplicationDBContext context) : IVisitorRepositor
 
     public async Task<Visitor> CreateAsync(Visitor visitorModel)
     {
-        visitorModel.CreatedAt = DateTime.UtcNow;
+        visitorModel.CreatedAt = WatClock.Now;
 
         await _context.Visitor.AddAsync(visitorModel);
         await _context.SaveChangesAsync();
@@ -99,29 +99,42 @@ public class VisitorRepository(ApplicationDBContext context) : IVisitorRepositor
 
     public async Task<List<VisitorExportDto>> GetVisitorsForExportAsync(VisitorExportRequest request)
     {
-        var visitors = _context.Visitor.AsQueryable();
+        var query = _context.Visit
+            .Include(v => v.Visitor)
+                .ThenInclude(v => v.WorkerDetails)
+            .Include(v => v.Visitor)
+                .ThenInclude(v => v.Identification)
+            .AsQueryable();
 
         if (request.StartDate.HasValue)
         {
-            visitors = visitors.Where(v => v.CreatedAt >= request.StartDate.Value);
+            query = query.Where(v => v.RegisteredAt >= request.StartDate.Value.Date);
         }
 
         if (request.EndDate.HasValue)
         {
-            visitors = visitors.Where(v => v.CreatedAt <= request.EndDate.Value);
+            query = query.Where(v => v.RegisteredAt < request.EndDate.Value.Date.AddDays(1));
         }
 
-        return await visitors
-            .OrderByDescending(v => v.CreatedAt)
+        return await query
+            .OrderByDescending(v => v.RegisteredAt)
             .Select(v => new VisitorExportDto
             {
-                FullName = v.FullName,
-                PhoneNumber = v.PhoneNumber,
-                VisitorType = v.VisitorType.ToString(),
-                CompanyName = v.WorkerDetails != null ? v.WorkerDetails.CompanyName : string.Empty,
-                IdentificationType = v.Identification != null ? v.Identification.IdentificationType : string.Empty,
-                IdentificationNumber = v.Identification != null ? v.Identification.IdentificationNumber : string.Empty,
-                CreatedAt = v.CreatedAt
+                FullName = v.Visitor.FullName,
+                PhoneNumber = v.Visitor.PhoneNumber,
+                VisitorType = v.Visitor.VisitorType.ToString(),
+                CompanyName = v.Visitor.WorkerDetails != null ? v.Visitor.WorkerDetails.CompanyName : string.Empty,
+                IdentificationType = v.Visitor.Identification != null ? v.Visitor.Identification.IdentificationType : string.Empty,
+                IdentificationNumber = v.Visitor.Identification != null ? v.Visitor.Identification.IdentificationNumber : string.Empty,
+                HostName = v.HostName,
+                HostDepartment = v.HostDepartment,
+                TagNumber = v.TagNumber,
+                PurposeOfVisit = v.PurposeOfVisit,
+                FloorNumber = v.FloorNumber,
+                CheckInTime = v.CheckInTime,
+                CheckOutTime = v.CheckOutTime,
+                Status = v.Status.ToString(),
+                RegisteredAt = v.RegisteredAt
             })
             .ToListAsync();
     }

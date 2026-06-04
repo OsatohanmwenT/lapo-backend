@@ -23,8 +23,6 @@ namespace lapo_vms_api.API.Helpers
 
         public async Task<(bool success, string message)> ADLogin(Login login)
         {
-            _logger.LogInformation("Starting AD login for user: {Username}", login.Username);
-
             var options = new RestClientOptions(_configuration["CentralAPI"])
             {
                 Authenticator = new HttpBasicAuthenticator(
@@ -46,7 +44,10 @@ namespace lapo_vms_api.API.Helpers
 
                 if (!response.IsSuccessStatusCode || string.IsNullOrWhiteSpace(response.Content))
                 {
-                    _logger.LogWarning("AD login failed. StatusCode: {StatusCode}", response.StatusCode);
+                    _logger.LogWarning(
+                        "AD authentication service returned an unusable response. StatusCode={StatusCode} HasContent={HasContent}",
+                        response.StatusCode,
+                        !string.IsNullOrWhiteSpace(response.Content));
                     return (false, "Bad response from AD");
                 }
 
@@ -55,7 +56,10 @@ namespace lapo_vms_api.API.Helpers
                     new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
                 if (encryptedContent?.responsedataValue == null)
+                {
+                    _logger.LogWarning("AD authentication service returned an invalid response payload");
                     return (false, "Invalid response from AD");
+                }
 
                 var decryptedContent = Decrypt(encryptedContent.responsedataValue, _configuration["EncDecPassword"]);
 
@@ -65,7 +69,6 @@ namespace lapo_vms_api.API.Helpers
 
                 if (resp?.success == true)
                 {
-                    _logger.LogInformation("AD login successful for user: {Username}", login.Username);
                     return (true, "Login successful");
                 }
 
@@ -73,7 +76,7 @@ namespace lapo_vms_api.API.Helpers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "AD login exception for user: {Username}", login.Username);
+                _logger.LogError(ex, "AD authentication service request failed");
                 return (false, "An error occurred during login");
             }
         }

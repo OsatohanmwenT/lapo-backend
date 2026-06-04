@@ -49,10 +49,24 @@ public class VisitRepository : IVisitRepository
 
         if (!string.IsNullOrWhiteSpace(queryParameters.Status))
         {
-            if (Enum.TryParse<VisitStatus>(queryParameters.Status, true, out var status))
+            var statusStr = queryParameters.Status.Equals("Approved", StringComparison.OrdinalIgnoreCase)
+                ? nameof(VisitStatus.CheckedIn)
+                : queryParameters.Status;
+
+            if (Enum.TryParse<VisitStatus>(statusStr, true, out var status))
             {
                 query = query.Where(v => v.Status == status);
             }
+        }
+
+        if (queryParameters.StartDate.HasValue)
+        {
+            query = query.Where(v => v.RegisteredAt >= queryParameters.StartDate.Value.Date);
+        }
+
+        if (queryParameters.EndDate.HasValue)
+        {
+            query = query.Where(v => v.RegisteredAt < queryParameters.EndDate.Value.Date.AddDays(1));
         }
 
         return await query
@@ -192,6 +206,29 @@ public class VisitRepository : IVisitRepository
         return existing;
     }
 
+    public async Task<bool> HasActiveVisitByPhoneAsync(string normalizedPhone)
+    {
+        return await _context.Visit
+            .Include(v => v.Visitor)
+            .Where(v =>
+                (v.Status == VisitStatus.Pending || v.Status == VisitStatus.CheckedIn) &&
+                v.Visitor.PhoneNumber
+                    .Replace(" ", "").Replace("+", "").Replace("-", "")
+                    .Replace("(", "").Replace(")", "") == normalizedPhone)
+            .AnyAsync();
+    }
+
+    public async Task<bool> IsTagNumberInUseAsync(string tagNumber, Guid excludeVisitId)
+    {
+        return await _context.Visit
+            .Where(v =>
+                v.Id != excludeVisitId &&
+                v.Status == VisitStatus.CheckedIn &&
+                v.TagNumber != null &&
+                v.TagNumber == tagNumber)
+            .AnyAsync();
+    }
+
     public async Task<List<ExportVisitsDto>?> GetVisitsForExportAsync(VisitExportRequest request)
     {
         var query = _context.Visit
@@ -211,9 +248,16 @@ public class VisitRepository : IVisitRepository
             query = query.Where(v => v.RegisteredAt <= request.EndDate.Value);
         }
 
-        if (request.Status.HasValue)
+        if (!string.IsNullOrWhiteSpace(request.Status))
         {
-            query = query.Where(v => v.Status == request.Status.Value);
+            var statusStr = request.Status.Equals("Approved", StringComparison.OrdinalIgnoreCase)
+                ? nameof(VisitStatus.CheckedIn)
+                : request.Status;
+
+            if (Enum.TryParse<VisitStatus>(statusStr, true, out var status))
+            {
+                query = query.Where(v => v.Status == status);
+            }
         }
 
         return await query

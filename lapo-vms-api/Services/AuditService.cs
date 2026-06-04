@@ -1,4 +1,3 @@
-using System;
 using lapo_vms_api.Data;
 using lapo_vms_api.Helpers;
 using lapo_vms_api.Interface;
@@ -14,6 +13,26 @@ public class AuditService : IAuditService
     public AuditService(ApplicationDBContext context)
     {
         _context = context;
+    }
+
+    public async Task<List<AuditLog>> GetLogsAsync(AuditQueryParameters queryParameters)
+    {
+        var query = _context.AuditLogs.AsQueryable();
+
+        if (queryParameters.StartDate.HasValue)
+            query = query.Where(l => l.Timestamp >= queryParameters.StartDate.Value);
+
+        if (queryParameters.EndDate.HasValue)
+            query = query.Where(l => l.Timestamp <= queryParameters.EndDate.Value);
+
+        if (!string.IsNullOrWhiteSpace(queryParameters.EventType))
+            query = query.Where(l => l.EventType == queryParameters.EventType);
+
+        return await query
+            .OrderByDescending(l => l.Timestamp)
+            .Skip((queryParameters.PageNumber - 1) * queryParameters.PageSize)
+            .Take(queryParameters.PageSize)
+            .ToListAsync();
     }
 
     public async Task LogEventAsync(AuditLog log)

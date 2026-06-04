@@ -1,4 +1,5 @@
 using System;
+using lapo_vms_api.Helpers;
 
 namespace lapo_vms_api.Model;
 
@@ -9,7 +10,7 @@ public class AuditLog
     public Guid? ActorId { get; set; }
     public string? ActorRole { get; set; }
     public Guid? VisitorId { get; set; }
-    public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+    public DateTime Timestamp { get; set; } = WatClock.Now;
     public string? Metadata { get; set; }
 
     public string? PrevHash { get; set; }

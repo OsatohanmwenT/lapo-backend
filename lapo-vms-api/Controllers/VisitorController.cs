@@ -5,15 +5,20 @@ using lapo_vms_api.Interface;
 using lapo_vms_api.Mappers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace lapo_vms_api.Controllers;
 
 [Route("api/visitors")]
 [ApiController]
-public class VisitorController(IVisitorRepository visitorRepository, IExportService exportService) : ControllerBase
+public class VisitorController(
+    IVisitorRepository visitorRepository,
+    IExportService exportService,
+    ILogger<VisitorController> logger) : ControllerBase
 {
     private readonly IVisitorRepository _visitorRepository = visitorRepository;
     private readonly IExportService _exportService = exportService;
+    private readonly ILogger<VisitorController> _logger = logger;
 
     /// <summary>
     /// Retrieves the list of registered visitors and applies any supplied query filters,
@@ -97,6 +102,13 @@ public class VisitorController(IVisitorRepository visitorRepository, IExportServ
 
         var created = await _visitorRepository.CreateAsync(visitor);
 
+        _logger.LogInformation(
+            "Visitor created. VisitorId={VisitorId} ActorId={ActorId} StaffId={StaffId} Role={Role}",
+            created.Id,
+            User.FindFirstValue(ClaimTypes.NameIdentifier),
+            User.FindFirstValue("staffId"),
+            User.FindFirstValue(ClaimTypes.Role));
+
         return Ok(created.ToVisitorDto());
     }
 
@@ -105,7 +117,10 @@ public class VisitorController(IVisitorRepository visitorRepository, IExportServ
     {
         var visitorsForExport = await _visitorRepository.GetVisitorsForExportAsync(request);
         if (!visitorsForExport.Any())
+        {
+            LogExportFailure("NoRecordsFound");
             return NotFound("No visitors found for the specified export criteria.");
+        }
 
         byte[] fileContent;
         string fileName;
@@ -114,16 +129,18 @@ public class VisitorController(IVisitorRepository visitorRepository, IExportServ
         {
             visitorsForExport.ForEach(v => v.PhoneNumber = $"=\"{v.PhoneNumber}\"");
             fileContent = _exportService.ExportToCsv(visitorsForExport);
-            fileName = $"Visitor_Export_{DateTime.UtcNow:yyyyMMddHHmmss}.csv";
+            fileName = $"Visitor_Export_{WatClock.Now:yyyyMMddHHmmss}.csv";
 
+            LogExport(request.Format, visitorsForExport.Count);
             return File(fileContent, "text/csv", fileName);
         }
 
         if (request.Format == ExportType.Excel)
         {
             fileContent = _exportService.ExportToExcel(visitorsForExport, "Visitors");
-            fileName = $"Visitor_Export_{DateTime.UtcNow:yyyyMMddHHmmss}.xlsx";
+            fileName = $"Visitor_Export_{WatClock.Now:yyyyMMddHHmmss}.xlsx";
 
+            LogExport(request.Format, visitorsForExport.Count);
             return File(
                 fileContent,
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -131,6 +148,28 @@ public class VisitorController(IVisitorRepository visitorRepository, IExportServ
             );
         }
 
+        LogExportFailure("InvalidFormat");
         return BadRequest("Invalid export format.");
+    }
+
+    private void LogExport(ExportType format, int recordCount)
+    {
+        _logger.LogInformation(
+            "Visitors exported. Format={Format} RecordCount={RecordCount} ActorId={ActorId} StaffId={StaffId} Role={Role}",
+            format,
+            recordCount,
+            User.FindFirstValue(ClaimTypes.NameIdentifier),
+            User.FindFirstValue("staffId"),
+            User.FindFirstValue(ClaimTypes.Role));
+    }
+
+    private void LogExportFailure(string reason)
+    {
+        _logger.LogWarning(
+            "Visitor export failed. Reason={Reason} ActorId={ActorId} StaffId={StaffId} Role={Role}",
+            reason,
+            User.FindFirstValue(ClaimTypes.NameIdentifier),
+            User.FindFirstValue("staffId"),
+            User.FindFirstValue(ClaimTypes.Role));
     }
 }

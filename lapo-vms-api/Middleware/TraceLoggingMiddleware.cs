@@ -9,11 +9,16 @@ public class TraceLoggingMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly ILogger<TraceLoggingMiddleware> _logger;
+    private readonly int _slowRequestThresholdMs;
 
-    public TraceLoggingMiddleware(RequestDelegate next, ILogger<TraceLoggingMiddleware> logger)
+    public TraceLoggingMiddleware(
+        RequestDelegate next,
+        ILogger<TraceLoggingMiddleware> logger,
+        IConfiguration configuration)
     {
         _next = next;
         _logger = logger;
+        _slowRequestThresholdMs = configuration.GetValue<int?>("Logging:SlowRequestThresholdMs") ?? 2000;
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -25,20 +30,11 @@ public class TraceLoggingMiddleware
         using (LogContext.PushProperty("Method", context.Request.Method))
         using (LogContext.PushProperty("Path", path))
         {
-            _logger.LogTrace("Request started");
+            var exceptionLogged = false;
 
             try
             {
                 await _next(context);
-
-                stopwatch.Stop();
-
-                using (LogContext.PushProperty("StatusCode", context.Response.StatusCode))
-                {
-                    _logger.LogTrace(
-                        "Request completed in {ElapsedMs}ms",
-                        stopwatch.ElapsedMilliseconds);
-                }
             }
             catch (Exception ex)
             {
@@ -58,8 +54,45 @@ public class TraceLoggingMiddleware
                         ex.Message);
                 }
 
+                exceptionLogged = true;
                 throw;
             }
+            finally
+            {
+                stopwatch.Stop();
+
+                if (!exceptionLogged)
+                {
+                    LogCompletedRequest(context.Response.StatusCode, stopwatch.ElapsedMilliseconds);
+                }
+            }
+        }
+    }
+
+    private void LogCompletedRequest(int statusCode, long elapsedMs)
+    {
+        if (statusCode >= StatusCodes.Status500InternalServerError)
+        {
+            _logger.LogError(
+                "Request completed with server error. StatusCode={StatusCode} ElapsedMs={ElapsedMs}",
+                statusCode,
+                elapsedMs);
+        }
+        else if (statusCode is StatusCodes.Status401Unauthorized or StatusCodes.Status403Forbidden)
+        {
+            _logger.LogWarning(
+                "Request access denied. StatusCode={StatusCode} ElapsedMs={ElapsedMs}",
+                statusCode,
+                elapsedMs);
+        }
+
+        if (elapsedMs >= _slowRequestThresholdMs)
+        {
+            _logger.LogWarning(
+                "Slow request completed. StatusCode={StatusCode} ElapsedMs={ElapsedMs} ThresholdMs={ThresholdMs}",
+                statusCode,
+                elapsedMs,
+                _slowRequestThresholdMs);
         }
     }
 

@@ -1,11 +1,13 @@
 using lapo_vms_api.API.Helpers;
 using lapo_vms_api.Data;
+using lapo_vms_api.Helpers;
 using lapo_vms_api.Interface;
 using lapo_vms_api.Repository;
 using lapo_vms_api.Services;
 using Scalar.AspNetCore;
 using System.Reflection;
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.IdentityModel.Tokens;
@@ -14,7 +16,6 @@ using System.Text;
 using System.Text.Json;
 using lapo_vms_api.Middleware;
 using Serilog;
-using Serilog.Events;
 
 var envPath = Path.Combine(Directory.GetCurrentDirectory(), ".env");
 if (File.Exists(envPath))
@@ -48,12 +49,10 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Host.UseSerilog((context, services, config) =>
 {
-    var isDevelopment = context.HostingEnvironment.IsDevelopment();
-
     config
-        .MinimumLevel.Is(isDevelopment ? LogEventLevel.Verbose : LogEventLevel.Information)
-        .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
-        .MinimumLevel.Override("Microsoft.EntityFrameworkCore", LogEventLevel.Error)
+        .MinimumLevel.Information()
+        .MinimumLevel.Override("Microsoft", Serilog.Events.LogEventLevel.Warning)
+        .MinimumLevel.Override("Microsoft.EntityFrameworkCore", Serilog.Events.LogEventLevel.Error)
         .Enrich.FromLogContext()
         .WriteTo.Console(
             outputTemplate:
@@ -121,8 +120,23 @@ builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<AdAuthHelper>();
 
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
+var useLocalAuth = builder.Environment.IsDevelopment()
+    && builder.Configuration.GetValue<bool>("LocalAuth:Enabled");
+var authenticationScheme = useLocalAuth
+    ? LocalAuthHandler.SchemeName
+    : JwtBearerDefaults.AuthenticationScheme;
 
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+var authentication = builder.Services.AddAuthentication(authenticationScheme);
+
+if (useLocalAuth)
+{
+    authentication.AddScheme<AuthenticationSchemeOptions, LocalAuthHandler>(
+        LocalAuthHandler.SchemeName,
+        _ => { });
+}
+else
+{
+    authentication
     .AddJwtBearer(options =>
     {
         options.TokenValidationParameters = new TokenValidationParameters
@@ -159,6 +173,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             }
         };
     });
+}
 
 builder.Services.AddAuthorization();
 
@@ -178,6 +193,11 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+app.Logger.LogInformation(
+    "Application starting. Environment={Environment} LocalAuthEnabled={LocalAuthEnabled}",
+    app.Environment.EnvironmentName,
+    useLocalAuth);
 
 app.UseCors("AllowFrontend");
 
