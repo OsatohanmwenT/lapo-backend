@@ -13,5 +13,6 @@ public interface IVisitorRepository
     Task<Visitor> CreateAsync(Visitor visitorModel);
     Task<Visitor?> UpdateAsync(Guid id, Visitor visitorModel);
     Task<Visitor?> DeleteAsync(Guid id);
+    Task<bool> IsVisitorPhoneExistsAsync(string normalizedPhone);
     Task<List<VisitorExportDto>> GetVisitorsForExportAsync(VisitorExportRequest request);
 }

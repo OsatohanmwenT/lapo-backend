@@ -12,6 +12,17 @@ public class VisitorRepository(ApplicationDBContext context) : IVisitorRepositor
 {
     private readonly ApplicationDBContext _context = context;
 
+    public async Task<bool> IsVisitorPhoneExistsAsync(string normalizedPhone)
+    {
+        return await _context.Visitor.AnyAsync(v =>
+            v.PhoneNumber
+                .Replace(" ", "")
+                .Replace("+", "")
+                .Replace("-", "")
+                .Replace("(", "")
+                .Replace(")", "") == normalizedPhone);
+    }
+
     public async Task<Visitor> CreateAsync(Visitor visitorModel)
     {
         visitorModel.CreatedAt = WatClock.Now;

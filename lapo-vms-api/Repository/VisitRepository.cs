@@ -236,16 +236,12 @@ public class VisitRepository : IVisitRepository
                     .ThenInclude(v => v.WorkerDetails)
                 .Include(v => v.Visitor)
                     .ThenInclude(v => v.Identification)
+                .Include(v => v.VisitItems)
                 .AsQueryable();
 
-        if (request.StartDate.HasValue)
+        if (!string.IsNullOrWhiteSpace(request.Search))
         {
-            query = query.Where(v => v.RegisteredAt >= request.StartDate.Value);
-        }
-
-        if (request.EndDate.HasValue)
-        {
-            query = query.Where(v => v.RegisteredAt <= request.EndDate.Value);
+            query = query.Where(v => v.Visitor.FullName.Contains(request.Search));
         }
 
         if (!string.IsNullOrWhiteSpace(request.Status))
@@ -260,27 +256,63 @@ public class VisitRepository : IVisitRepository
             }
         }
 
-        return await query
+        if (request.StartDate.HasValue)
+        {
+            query = query.Where(v => v.RegisteredAt >= request.StartDate.Value.Date);
+        }
+
+        if (request.EndDate.HasValue)
+        {
+            query = query.Where(v => v.RegisteredAt < request.EndDate.Value.Date.AddDays(1));
+        }
+
+        query = query.OrderByDescending(v => v.RegisteredAt);
+
+        if (request.PageNumber.HasValue || request.PageSize.HasValue)
+        {
+            const int maxPageSize = 100;
+            var pageNumber = request.PageNumber.GetValueOrDefault(1);
+            var pageSize = request.PageSize.GetValueOrDefault(10);
+
+            pageNumber = pageNumber < 1 ? 1 : pageNumber;
+            pageSize = pageSize < 1 ? 10 : Math.Min(pageSize, maxPageSize);
+
+            query = query
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize);
+        }
+
+        var visits = await query.ToListAsync();
+
+        return visits
         .Select(v => new ExportVisitsDto
         {
+            VisitId = v.Id,
+            VisitorId = v.VisitorId,
             VisitorName = v.Visitor.FullName,
             VisitorPhoneNumber = v.Visitor.PhoneNumber,
+            VisitorType = v.Visitor.VisitorType.ToString(),
             PurposeOfVisit = v.PurposeOfVisit,
-            TagNumber = v.TagNumber,
+            TagNumber = v.TagNumber ?? string.Empty,
             FloorNumber = v.FloorNumber,
             CompanyName = v.Visitor.WorkerDetails != null ? v.Visitor.WorkerDetails.CompanyName : string.Empty,
             IdentificationType = v.Visitor.Identification != null ? v.Visitor.Identification.IdentificationType : string.Empty,
             IdentificationNumber = v.Visitor.Identification != null ? v.Visitor.Identification.IdentificationNumber : string.Empty,
 
-            HostName = v.HostName,
-            HostDepartment = v.HostDepartment,
+            HostName = v.HostName ?? string.Empty,
+            HostDepartment = v.HostDepartment ?? string.Empty,
+            VisitItems = string.Join("; ", v.VisitItems.Select(i =>
+                $"{i.LaptopModel ?? "Item"}{(string.IsNullOrWhiteSpace(i.SerialNumber) ? string.Empty : $" ({i.SerialNumber})")}")),
 
             RegisteredAt = v.RegisteredAt,
+            RescheduleDate = v.RescheduleDate,
             CheckInTime = v.CheckInTime,
+            CheckedInBy = v.CheckedInBy,
             CheckOutTime = v.CheckOutTime,
+            CheckedOutBy = v.CheckedOutBy,
 
             Status = v.Status.ToString()
         })
-        .ToListAsync();
+        .ToList();
     }
 }

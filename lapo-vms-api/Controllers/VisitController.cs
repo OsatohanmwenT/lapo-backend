@@ -16,10 +16,12 @@ namespace lapo_vms_api.Controllers
         IVisitRepository visitRepository,
         IExportService exportService,
         IUserRepository userRepository,
+        IVisitorRepository visitorRepository,
         IAuditService auditService,
         ILogger<VisitController> logger) : ControllerBase
     {
         private readonly IVisitRepository _visitRepository = visitRepository;
+        private readonly IVisitorRepository _visitorRepository = visitorRepository;
         private readonly IExportService _exportService = exportService;
         private readonly IUserRepository _userRepository = userRepository;
         private readonly IAuditService _auditService = auditService;
@@ -39,6 +41,11 @@ namespace lapo_vms_api.Controllers
         private string? GetActorStaffId()
         {
             return User.FindFirstValue("staffId");
+        }
+
+        private string? GetActorName()
+        {
+            return User.FindFirstValue(ClaimTypes.Name);
         }
 
         private Task LogVisitAuditAsync(string eventType, Visit visit, string metadata)
@@ -131,6 +138,13 @@ namespace lapo_vms_api.Controllers
             var normalizedPhone = dto.Visitor.PhoneNumber
                 .Replace(" ", "").Replace("+", "").Replace("-", "")
                 .Replace("(", "").Replace(")", "");
+
+            // var phoneExists = await _visitorRepository.IsVisitorPhoneExistsAsync(normalizedPhone);
+            // if (phoneExists)
+            // {
+            //     LogVisitFailure("Create", "PhoneAlreadyExists");
+            //     return Conflict(new { message = "A visitor with this phone number already exists. Please use a different phone number." });
+            // }
 
             var hasActiveVisit = await _visitRepository.HasActiveVisitByPhoneAsync(normalizedPhone);
             if (hasActiveVisit)
@@ -250,11 +264,20 @@ namespace lapo_vms_api.Controllers
                 var user = await _userRepository.GetByStaffIdAsync(dto.Value.Trim());
                 if (user == null)
                 {
-                    LogVisitFailure("CheckOut", "StaffUserNotFound", id);
-                    return NotFound(new { message = "User not found." });
-                }
+                    var actorStaffId = GetActorStaffId();
+                    if (string.IsNullOrWhiteSpace(actorStaffId) ||
+                        !actorStaffId.Equals(dto.Value.Trim(), StringComparison.OrdinalIgnoreCase))
+                    {
+                        LogVisitFailure("CheckOut", "StaffUserNotFound", id);
+                        return NotFound(new { message = "User not found." });
+                    }
 
-                checkedOutBy = user.Name ?? string.Empty;
+                    checkedOutBy = GetActorName() ?? actorStaffId;
+                }
+                else
+                {
+                    checkedOutBy = user.Name ?? string.Empty;
+                }
             }
             else
             {
