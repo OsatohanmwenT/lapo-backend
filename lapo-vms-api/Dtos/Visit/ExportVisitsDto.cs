@@ -4,7 +4,6 @@ namespace lapo_vms_api.Dtos.Visit;
 
 public class ExportVisitsDto
 {
-    public Guid VisitId { get; set; }
     public Guid VisitorId { get; set; }
     public string VisitorName { get; set; } = string.Empty;
     public string VisitorPhoneNumber { get; set; } = string.Empty;

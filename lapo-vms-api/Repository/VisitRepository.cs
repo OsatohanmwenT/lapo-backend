@@ -70,10 +70,10 @@ public class VisitRepository : IVisitRepository
         }
 
         return await query
-                .OrderByDescending(v => v.RegisteredAt)
-                .Skip((queryParameters.PageNumber - 1) * queryParameters.PageSize)
-                .Take(queryParameters.PageSize)
-                .ToListAsync();
+            .OrderByDescending(v => v.RegisteredAt) // newest first
+            .Skip((queryParameters.PageNumber - 1) * queryParameters.PageSize)
+            .Take(queryParameters.PageSize)
+            .ToListAsync();
     }
 
     public async Task<Visit?> GetByIdAsync(Guid id)
@@ -287,7 +287,6 @@ public class VisitRepository : IVisitRepository
         return visits
         .Select(v => new ExportVisitsDto
         {
-            VisitId = v.Id,
             VisitorId = v.VisitorId,
             VisitorName = v.Visitor.FullName,
             VisitorPhoneNumber = v.Visitor.PhoneNumber,
