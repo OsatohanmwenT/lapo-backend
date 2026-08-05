@@ -224,6 +224,61 @@ namespace lapo_vms_api.Controllers
                 createdVisit.ToVisitDto());
         }
 
+        [HttpPost("returning")]
+        [AllowAnonymous]
+        public async Task<IActionResult> CreateReturningVisit([FromBody] CreateReturningVisitDto dto)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+            if (dto.VisitorId == Guid.Empty || string.IsNullOrWhiteSpace(dto.PurposeOfVisit) || string.IsNullOrWhiteSpace(dto.FloorNumber))
+                return BadRequest(new { message = "Visitor, purpose of visit, and floor number are required." });
+
+            var visitor = await _visitorRepository.GetByIdAsync(dto.VisitorId);
+            if (visitor == null) return NotFound(new { message = "Visitor not found." });
+
+            var normalizedPhone = visitor.PhoneNumber
+                .Replace(" ", "").Replace("+", "").Replace("-", "")
+                .Replace("(", "").Replace(")", "");
+
+            if (await _visitRepository.HasActiveVisitByPhoneAsync(normalizedPhone))
+            {
+                LogVisitFailure("CreateReturning", "ActiveVisitExists");
+                return Conflict(new { message = "This visitor already has an active or pending visit. Please wait for it to be completed before registering again." });
+            }
+
+            var visit = new Visit
+            {
+                VisitorId = visitor.Id,
+                Visitor = visitor,
+                PurposeOfVisit = dto.PurposeOfVisit.Trim(),
+                FloorNumber = dto.FloorNumber.Trim(),
+                HostName = dto.HostName?.Trim(),
+                HostDepartment = dto.HostDepartment?.Trim(),
+                CheckedInBy = string.Empty,
+                CheckedOutBy = string.Empty,
+                Status = VisitStatus.Pending,
+                VisitItems = dto.VisitItems
+                    .Where(item => item != null)
+                    .Select(item => new VisitItem
+                    {
+                        LaptopModel = item!.LaptopModel,
+                        SerialNumber = item.SerialNumber
+                    })
+                    .ToList()
+            };
+
+            var createdVisit = await _visitRepository.CreateAsync(visit);
+
+            await LogVisitAuditAsync(
+                "VISIT_CREATED",
+                createdVisit,
+                $"Status: {createdVisit.Status}; HostName: {createdVisit.HostName}; HostDepartment: {createdVisit.HostDepartment}");
+
+            return CreatedAtAction(
+                nameof(GetVisitById),
+                new { id = createdVisit.Id },
+                createdVisit.ToVisitDto());
+        }
+
         /// <summary>
         /// Checks out an existing visit and records whether the action was performed by the guest or staff.
         /// </summary>
