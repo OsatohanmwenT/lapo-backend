@@ -235,6 +235,11 @@ namespace lapo_vms_api.Controllers
             var visitor = await _visitorRepository.GetByIdAsync(dto.VisitorId);
             if (visitor == null) return NotFound(new { message = "Visitor not found." });
 
+            if (!Enum.IsDefined(dto.VisitorType))
+                return BadRequest(new { message = "Invalid visitor category." });
+
+            var previousVisitorType = visitor.VisitorType;
+
             var normalizedPhone = visitor.PhoneNumber
                 .Replace(" ", "").Replace("+", "").Replace("-", "")
                 .Replace("(", "").Replace(")", "");
@@ -266,12 +271,14 @@ namespace lapo_vms_api.Controllers
                     .ToList()
             };
 
+            visitor.VisitorType = dto.VisitorType;
+
             var createdVisit = await _visitRepository.CreateAsync(visit);
 
             await LogVisitAuditAsync(
                 "VISIT_CREATED",
                 createdVisit,
-                $"Status: {createdVisit.Status}; HostName: {createdVisit.HostName}; HostDepartment: {createdVisit.HostDepartment}");
+                $"Status: {createdVisit.Status}; PreviousVisitorType: {previousVisitorType}; VisitorType: {dto.VisitorType}; HostName: {createdVisit.HostName}; HostDepartment: {createdVisit.HostDepartment}");
 
             return CreatedAtAction(
                 nameof(GetVisitById),

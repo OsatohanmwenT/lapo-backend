@@ -28,6 +28,9 @@ public class AuditService : IAuditService
         if (!string.IsNullOrWhiteSpace(queryParameters.EventType))
             query = query.Where(l => l.EventType == queryParameters.EventType);
 
+        if (queryParameters.VisitorId.HasValue)
+            query = query.Where(l => l.VisitorId == queryParameters.VisitorId.Value);
+
         return await query
             .OrderByDescending(l => l.Timestamp)
             .Skip((queryParameters.PageNumber - 1) * queryParameters.PageSize)
